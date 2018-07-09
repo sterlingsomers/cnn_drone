@@ -7,6 +7,8 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
 from PIL import Image as Image
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 # define colors
