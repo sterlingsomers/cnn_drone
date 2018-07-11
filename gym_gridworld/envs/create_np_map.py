@@ -66,11 +66,11 @@ def convert_map_to_volume_dict(x,y,map):
     return_dict['value_feature_map'] = value_feature_map
     #save before returning
     #todo fix value_feature_map and feature_maps -> they should be the same (except inside out)
-    print("saving value/feature maps")
-    with open('features/features_to_values.dict', 'wb') as handle:
-        pickle.dump(feature_value_map, handle)
-    with open('features/values_to_features.dict', 'wb') as handle:
-        pickle.dump(value_feature_map,handle)
+    # print("saving value/feature maps")
+    # with open('features/features_to_values.dict', 'wb') as handle:
+    #     pickle.dump(feature_value_map, handle)
+    # with open('features/values_to_features.dict', 'wb') as handle:
+    #     pickle.dump(value_feature_map,handle)
 
     for i in range(len(vol)):
         key_string = i#'alt{}'.format(i)
@@ -119,8 +119,8 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
 
         #store it for future use
         print("saving map.")
-        with open('maps/' + filename, 'wb') as handle:
-            pickle.dump(map, handle)
+        # with open('maps/' + filename, 'wb') as handle:
+        #     pickle.dump(map, handle)
     #convert_map_to_volume_dict(x,y,map)
     return convert_map_to_volume_dict(x,y,map)
 
@@ -129,6 +129,6 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
 
 
 #sample code
-a = map_to_volume_dict(0,0,20,20)
+#a = map_to_volume_dict(185,75,20,20)
 # f,v = get_feature_value_maps(300,200,a) #300,200
-print('complete.')
+#print('complete.')

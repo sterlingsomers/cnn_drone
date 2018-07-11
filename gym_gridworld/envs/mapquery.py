@@ -24,8 +24,8 @@ send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 def terrain_request(lon=0,lat=0,width=5,height=5):
     startlat = lat
     startlon = lon
-    list1 = list(range(startlon,startlon+width))
-    list2 = list(range(startlat,startlat+height))
+    list2 = list(range(startlon,startlon+width))
+    list1 = list(range(startlat,startlat+height))
 
     #print(list1,list2)
     combinations = list(itertools.product(list1,list2))
@@ -47,4 +47,6 @@ def terrain_request(lon=0,lat=0,width=5,height=5):
 
     return results_dict
 
-
+#sample code
+#a = terrain_request(185,75,20,20)
+#print("done")

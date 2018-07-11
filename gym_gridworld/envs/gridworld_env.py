@@ -37,7 +37,7 @@ class GridworldEnv(gym.Env):
         self.altitude = altitude
         self.action_space = spaces.Discrete(15)
         # put the drone in
-        self.map_volume[altitude]['drone'][local_x, local_y] = 1.0
+        self.map_volume[altitude]['drone'][local_y, local_x] = 1.0
 
         self.actionvalue_heading_action = {
             0: {1:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
@@ -214,15 +214,16 @@ class GridworldEnv(gym.Env):
     def take_action(self,delta_alt=0,delta_x=0,delta_y=0,new_heading=1):
         print("take heading called",delta_alt,delta_x,delta_y,new_heading)
         local_coordinates = self.map_volume[self.altitude]['drone'].nonzero()
-        if int(local_coordinates[0]) + delta_x < 0 or  \
-            int(local_coordinates[1]) + delta_y < 0 or \
-            int(local_coordinates[0] + delta_x > 19) or \
-            int(local_coordinates[1] + delta_y > 19):
+        if int(local_coordinates[0]) + delta_y < 0 or  \
+            int(local_coordinates[1]) + delta_x < 0 or \
+            int(local_coordinates[0] + delta_y > 19) or \
+            int(local_coordinates[1] + delta_x > 19):
             return 0
 
         self.map_volume[self.altitude]['drone'][local_coordinates[0],local_coordinates[1]] = 0.0
-        self.map_volume[self.altitude + delta_alt]['drone'][local_coordinates[0]+delta_x,local_coordinates[1]+delta_y] = 1.0
+        self.map_volume[self.altitude + delta_alt]['drone'][local_coordinates[0]+delta_y,local_coordinates[1]+delta_x] = 1.0
         self.altitude += delta_alt
+        self.heading = new_heading
         #TODO can still go outside grid
 
 
@@ -473,6 +474,6 @@ class GridworldEnv(gym.Env):
         return (a, b, c, d) 
 
 
-a = GridworldEnv(map_x=1,map_y=1,local_x=0,local_y=2,heading=1,altitude=2)
+a = GridworldEnv(map_x=70,map_y=50,local_x=2,local_y=0,heading=1,altitude=2)
 
 print('complete')
