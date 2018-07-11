@@ -3,6 +3,7 @@ import sys
 import os
 import time
 import copy
+import math
 from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
@@ -24,15 +25,151 @@ class GridworldEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     num_env = 0
 
-    def __init__(self,x,y,heading,width=20,height=20):
-        self.map_volume = CNP.map_to_volume_dict(x,y,width,height)
-        self.local_coordinates = [0,0]
+    def __init__(self,map_x,map_y,local_x,local_y,heading,altitude,width=20,height=20):
+        self.map_volume = CNP.map_to_volume_dict(map_x,map_y,width,height)
+        self.local_coordinates = [local_x,local_y]
         self.world_coordinates = [70,50]
         self.actions = list(range(15))
+        self.heading = heading
+        self.altitude = altitude
         self.action_space = spaces.Discrete(15)
-        self.action_to_real_map = {
-            0:
+        # put the drone in
+        self.map_volume[altitude]['drone'][local_x, local_y] = 1.0
+
+        self.actionvalue_heading_action = {
+            0: {1:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
+                2:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=-1,new_heading=8)',
+                3:'self.take_action(delta_alt=-1,delta_x=0,delta_y=-1,new_heading=1)',
+                4:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=2)',
+                5:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=3)',
+                6:'self.take_action(delta_alt=-1,delta_x=1,delta_y=1,new_heading=4)',
+                7:'self.take_action(delta_alt=-1,delta_x=0,delta_y=1,new_heading=5)',
+                8:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=1,new_heading=6)'},
+            1: {1:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=-1,new_heading=8)',
+                2:'self.take_action(delta_alt=-1,delta_x=0,delta_y=-1,new_heading=1)',
+                3:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=2)',
+                4:'self.take_action(delta_alt=-1,delta_x=1,delta_y=0,new_heading=3)',
+                5:'self.take_action(delta_alt=-1,delta_x=1,delta_y=1,new_heading=4)',
+                6:'self.take_action(delta_alt=-1,delta_x=0,delta_y=1,new_heading=5)',
+                7:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=1,new_heading=6)',
+                8:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)'},
+            2: {1:'self.take_action(delta_alt=-1,delta_x=0,delta_y=-1,new_heading=1)',
+                2:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=2)',
+                3:'self.take_action(delta_alt=-1,delta_x=1,delta_y=0,new_heading=3)',
+                4:'self.take_action(delta_alt=-1,delta_x=1,delta_y=1,new_heading=4)',
+                5:'self.take_action(delta_alt=-1,delta_x=0,delta_y=1,new_heading=5)',
+                6:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=1,new_heading=6)',
+                7:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
+                8:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=-1,new_heading=8)'},
+            3: {1:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=2)',
+                2:'self.take_action(delta_alt=-1,delta_x=1,delta_y=0,new_heading=3)',
+                3:'self.take_action(delta_alt=-1,delta_x=1,delta_y=1,new_heading=4)',
+                4:'self.take_action(delta_alt=-1,delta_x=0,delta_y=1,new_heading=5)',
+                5:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=1,new_heading=6)',
+                6:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
+                7:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=-1,new_heading=8)',
+                8:'self.take_action(delta_alt=-1,delta_x=-0,delta_y=-1,new_heading=1)'},
+            4: {1:'self.take_action(delta_alt=-1,delta_x=1,delta_y=0,new_heading=3)',
+                2:'self.take_action(delta_alt=-1,delta_x=1,delta_y=1,new_heading=4)',
+                3:'self.take_action(delta_alt=-1,delta_x=0,delta_y=1,new_heading=5)',
+                4:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=1,new_heading=6)',
+                5:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
+                6:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=-1,new_heading=8)',
+                7:'self.take_action(delta_alt=-1,delta_x=0,delta_y=-1,new_heading=1)',
+                8:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=2)'},
+            5: {1:'self.take_action(delta_alt=0, delta_x=-1, delta_y=0, new_heading=7)',
+                2: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=-1, new_heading=8)',
+                3: 'self.take_action(delta_alt=0, delta_x=0, delta_y=-1, new_heading=1)',
+                4: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=2)',
+                5: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=3)',
+                6: 'self.take_action(delta_alt=0, delta_x=1, delta_y=1, new_heading=4)',
+                7: 'self.take_action(delta_alt=0, delta_x=0, delta_y=1, new_heading=5)',
+                8: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=1, new_heading=6)'},
+            6: {1: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=-1, new_heading=8)',
+                2: 'self.take_action(delta_alt=0, delta_x=0, delta_y=-1, new_heading=1)',
+                3: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=2)',
+                4: 'self.take_action(delta_alt=0, delta_x=1, delta_y=0, new_heading=3)',
+                5: 'self.take_action(delta_alt=0, delta_x=1, delta_y=1, new_heading=4)',
+                6: 'self.take_action(delta_alt=0, delta_x=0, delta_y=1, new_heading=5)',
+                7: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=1, new_heading=6)',
+                8: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=0, new_heading=7)'},
+            7: {1: 'self.take_action(delta_alt=0, delta_x=0, delta_y=-1, new_heading=1)',
+                2: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=2)',
+                3: 'self.take_action(delta_alt=0, delta_x=1, delta_y=0, new_heading=3)',
+                4: 'self.take_action(delta_alt=0, delta_x=1, delta_y=1, new_heading=4)',
+                5: 'self.take_action(delta_alt=0, delta_x=0, delta_y=1, new_heading=5)',
+                6: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=1, new_heading=6)',
+                7: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=0, new_heading=7)',
+                8: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=-1, new_heading=8)'},
+            8: {1: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=2)',
+                2: 'self.take_action(delta_alt=0, delta_x=1, delta_y=0, new_heading=3)',
+                3: 'self.take_action(delta_alt=0, delta_x=1, delta_y=1, new_heading=4)',
+                4: 'self.take_action(delta_alt=0, delta_x=0, delta_y=1, new_heading=5)',
+                5: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=1, new_heading=6)',
+                6: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=0, new_heading=7)',
+                7: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=-1, new_heading=8)',
+                8: 'self.take_action(delta_alt=0, delta_x=-0, delta_y=-1, new_heading=1)'},
+            9: {1: 'self.take_action(delta_alt=0, delta_x=1, delta_y=0, new_heading=3)',
+                2: 'self.take_action(delta_alt=0, delta_x=1, delta_y=1, new_heading=4)',
+                3: 'self.take_action(delta_alt=0, delta_x=0, delta_y=1, new_heading=5)',
+                4: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=1, new_heading=6)',
+                5: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=0, new_heading=7)',
+                6: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=-1, new_heading=8)',
+                7: 'self.take_action(delta_alt=0, delta_x=0, delta_y=-1, new_heading=1)',
+                8: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=2)'},
+            10: {1: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=0, new_heading=7)',
+                2: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=-1, new_heading=8)',
+                3: 'self.take_action(delta_alt=1, delta_x=0, delta_y=-1, new_heading=1)',
+                4: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=2)',
+                5: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=3)',
+                6: 'self.take_action(delta_alt=1, delta_x=1, delta_y=1, new_heading=4)',
+                7: 'self.take_action(delta_alt=1, delta_x=0, delta_y=1, new_heading=5)',
+                8: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=1, new_heading=6)'},
+            11: {1: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=-1, new_heading=8)',
+                2: 'self.take_action(delta_alt=1, delta_x=0, delta_y=-1, new_heading=1)',
+                3: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=2)',
+                4: 'self.take_action(delta_alt=1, delta_x=1, delta_y=0, new_heading=3)',
+                5: 'self.take_action(delta_alt=1, delta_x=1, delta_y=1, new_heading=4)',
+                6: 'self.take_action(delta_alt=1, delta_x=0, delta_y=1, new_heading=5)',
+                7: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=1, new_heading=6)',
+                8: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=0, new_heading=7)'},
+            12: {1: 'self.take_action(delta_alt=1, delta_x=0, delta_y=-1, new_heading=1)',
+                2: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=2)',
+                3: 'self.take_action(delta_alt=1, delta_x=1, delta_y=0, new_heading=3)',
+                4: 'self.take_action(delta_alt=1, delta_x=1, delta_y=1, new_heading=4)',
+                5: 'self.take_action(delta_alt=1, delta_x=0, delta_y=1, new_heading=5)',
+                6: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=1, new_heading=6)',
+                7: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=0, new_heading=7)',
+                8: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=-1, new_heading=8)'},
+            13: {1: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=2)',
+                2: 'self.take_action(delta_alt=1, delta_x=1, delta_y=0, new_heading=3)',
+                3: 'self.take_action(delta_alt=1, delta_x=1, delta_y=1, new_heading=4)',
+                4: 'self.take_action(delta_alt=1, delta_x=0, delta_y=1, new_heading=5)',
+                5: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=1, new_heading=6)',
+                6: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=0, new_heading=7)',
+                7: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=-1, new_heading=8)',
+                8: 'self.take_action(delta_alt=1, delta_x=-0, delta_y=-1, new_heading=1)'},
+            14: {1: 'self.take_action(delta_alt=1, delta_x=1, delta_y=0, new_heading=3)',
+                2: 'self.take_action(delta_alt=1, delta_x=1, delta_y=1, new_heading=4)',
+                3: 'self.take_action(delta_alt=1, delta_x=0, delta_y=1, new_heading=5)',
+                4: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=1, new_heading=6)',
+                5: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=0, new_heading=7)',
+                6: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=-1, new_heading=8)',
+                7: 'self.take_action(delta_alt=1, delta_x=0, delta_y=-1, new_heading=1)',
+                8: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=2)'}
+        
+
+
         }
+
+
+        print("here")
+
+
+        # self.action_map = {
+        #     0: self.take_action(self.heading,self.altitude,-1,self.heading-1,self.heading-2), #turn left, down 1
+        #
+        # }
 
     # def __init__(self):
     #     self.actions = list(range(15))
@@ -71,10 +208,42 @@ class GridworldEnv(gym.Env):
     #         plt.axis('off')
     #         self._render()
 
+    def take_action(self,delta_alt=0,delta_x=0,delta_y=0,new_heading=1):
+        print("take heading called",delta_alt,delta_x,delta_y,new_heading)
+        self.map_volume[self.altitude]['drone'][self.local_coordinates[0],self.local_coordinates[1]] = 0.0
+        self.map_volume[self.altitude + delta_alt]['drone'][self.local_coordinates[0]+delta_x,self.local_coordinates[1]+delta_y] = 1.0
+        self.altitude += delta_alt
+
+
+    def check_for_crash(self):
+        #if drone on altitude 0, crash
+        if self.map_volume[0]['drone'].nonzero():
+            return 1
+        #at any other altutidue, check for an object at the drone's position
+        drone_position = self.map_volume[self.altitude]['drone'].nonzero()
+        for i in range(self.altitude,4):
+
+            for key in self.map_volume[i]:
+                if key == 'drone':
+                    continue
+                hazards = self.map_volume[i][key].nonzero()
+                if drone_position in hazards:
+                    return 1
+        return 0
+
+
+
+
     def _step(self, action):
         ''' return next observation, reward, finished, success '''
 
         action = int(action)
+        eval(self.actionvalue_heading_action[action][self.heading])
+        crash = self.check_for_crash()
+
+        return (self.map_volume, 0, True, crash)
+
+
 
         return 0
 
@@ -293,5 +462,6 @@ class GridworldEnv(gym.Env):
         return (a, b, c, d) 
 
 
-a = GridworldEnv()
+a = GridworldEnv(70,50,1,1,1,2)
+
 print('complete')
