@@ -224,22 +224,22 @@ class GridworldEnv(gym.Env):
         self.map_volume[self.altitude + delta_alt]['drone'][local_coordinates[0]+delta_y,local_coordinates[1]+delta_x] = 1.0
         self.altitude += delta_alt
         self.heading = new_heading
-        #TODO can still go outside grid
+
 
 
     def check_for_crash(self):
         #if drone on altitude 0, crash
-        if self.map_volume[0]['drone'].nonzero():
+        if len(self.map_volume[0]['drone'].nonzero()[0]):
             return 1
         #at any other altutidue, check for an object at the drone's position
         drone_position = self.map_volume[self.altitude]['drone'].nonzero()
         for i in range(self.altitude,4):
 
             for key in self.map_volume[i]:
-                if key == 'drone':
+                if key == 'drone' or key == 'map':
                     continue
-                hazards = self.map_volume[i][key].nonzero()
-                if drone_position in hazards:
+                #just check if drone position is returns a non-zero
+                if self.map_volume[i][key][int(drone_position[0]),int(drone_position[1])]:
                     return 1
         return 0
 
@@ -474,6 +474,6 @@ class GridworldEnv(gym.Env):
         return (a, b, c, d) 
 
 
-a = GridworldEnv(map_x=70,map_y=50,local_x=2,local_y=0,heading=1,altitude=2)
-
+a = GridworldEnv(map_x=70,map_y=50,local_x=3,local_y=0,heading=1,altitude=0)
+print(a.check_for_crash())
 print('complete')
