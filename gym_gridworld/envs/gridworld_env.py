@@ -25,9 +25,12 @@ class GridworldEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     num_env = 0
 
-    def __init__(self,map_x,map_y,local_x,local_y,heading,altitude,width=20,height=20):
+    def __init__(self,map_x=0,map_y=0,local_x=0,local_y=0,heading=1,altitude=2,width=20,height=20):
         self.map_volume = CNP.map_to_volume_dict(map_x,map_y,width,height)
-        self.local_coordinates = [local_x,local_y]
+
+
+
+        #self.local_coordinates = [local_x,local_y]
         self.world_coordinates = [70,50]
         self.actions = list(range(15))
         self.heading = heading
@@ -210,8 +213,15 @@ class GridworldEnv(gym.Env):
 
     def take_action(self,delta_alt=0,delta_x=0,delta_y=0,new_heading=1):
         print("take heading called",delta_alt,delta_x,delta_y,new_heading)
-        self.map_volume[self.altitude]['drone'][self.local_coordinates[0],self.local_coordinates[1]] = 0.0
-        self.map_volume[self.altitude + delta_alt]['drone'][self.local_coordinates[0]+delta_x,self.local_coordinates[1]+delta_y] = 1.0
+        local_coordinates = self.map_volume[self.altitude]['drone'].nonzero()
+        if int(local_coordinates[0]) + delta_x < 0 or  \
+            int(local_coordinates[1]) + delta_y < 0 or \
+            int(local_coordinates[0] + delta_x > 19) or \
+            int(local_coordinates[1] + delta_y > 19):
+            return 0
+
+        self.map_volume[self.altitude]['drone'][local_coordinates[0],local_coordinates[1]] = 0.0
+        self.map_volume[self.altitude + delta_alt]['drone'][local_coordinates[0]+delta_x,local_coordinates[1]+delta_y] = 1.0
         self.altitude += delta_alt
         #TODO can still go outside grid
 
@@ -463,6 +473,6 @@ class GridworldEnv(gym.Env):
         return (a, b, c, d) 
 
 
-a = GridworldEnv(70,50,1,1,1,2)
+a = GridworldEnv(map_x=1,map_y=1,local_x=0,local_y=2,heading=1,altitude=2)
 
 print('complete')

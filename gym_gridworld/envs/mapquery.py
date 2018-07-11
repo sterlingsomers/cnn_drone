@@ -34,7 +34,7 @@ def terrain_request(lon=0,lat=0,width=5,height=5):
     results_dict = {}
     #get the terrain at each coordinate from mavsim
     for pair in combinations:
-        msg = "('{}', '{}', {}, {})".format('FLIGHT','MS_QUERY_TERRAIN',pair[1],pair[0])
+        msg = "('{}', '{}', {}, {})".format('FLIGHT','MS_QUERY_TERRAIN',pair[0],pair[1])
         sent = send_sock.sendto(msg.encode('utf-8'),mavsim_server)
         data,address = send_sock.recvfrom(1024)
         data = data.decode('utf-8')

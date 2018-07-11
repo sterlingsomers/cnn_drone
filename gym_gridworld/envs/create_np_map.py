@@ -57,8 +57,13 @@ def convert_map_to_volume_dict(x,y,map):
             value_feature_map[index] = feat
             index+=1#alt_index[feat[0]] += 1
 
-        vol[feat[0],xy[0]-top_left[0],xy[1]-top_left[1]] = feature_value_map[feat]
+        vol[feat[0],xy[1]-top_left[1],xy[0]-top_left[0]] = feature_value_map[feat]
 
+
+
+
+    return_dict['feature_value_map'] = feature_value_map
+    return_dict['value_feature_map'] = value_feature_map
     #save before returning
     #todo fix value_feature_map and feature_maps -> they should be the same (except inside out)
     print("saving value/feature maps")
@@ -111,6 +116,7 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
     if not map:
         print("generating map")
         map = terrain_request(x,y,width,height)
+
         #store it for future use
         print("saving map.")
         with open('maps/' + filename, 'wb') as handle:
@@ -123,6 +129,6 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
 
 
 #sample code
-# a = map_to_volume_dict(300,200,20,20)
+a = map_to_volume_dict(0,0,20,20)
 # f,v = get_feature_value_maps(300,200,a) #300,200
-# print('complete.')
+print('complete.')
