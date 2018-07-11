@@ -213,6 +213,7 @@ class GridworldEnv(gym.Env):
         self.map_volume[self.altitude]['drone'][self.local_coordinates[0],self.local_coordinates[1]] = 0.0
         self.map_volume[self.altitude + delta_alt]['drone'][self.local_coordinates[0]+delta_x,self.local_coordinates[1]+delta_y] = 1.0
         self.altitude += delta_alt
+        #TODO can still go outside grid
 
 
     def check_for_crash(self):
