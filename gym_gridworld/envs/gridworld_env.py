@@ -12,6 +12,8 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
+import random
+
 import create_np_map as CNP
 
 # define colors
@@ -25,7 +27,7 @@ class GridworldEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     num_env = 0
 
-    def __init__(self,map_x=0,map_y=0,local_x=0,local_y=0,heading=1,altitude=2,width=20,height=20):
+    def __init__(self,map_x=0,map_y=0,local_x=0,local_y=0,heading=1,altitude=2,hiker_x=5,hiker_y=5,width=20,height=20):
         self.map_volume = CNP.map_to_volume_dict(map_x,map_y,width,height)
 
 
@@ -38,6 +40,8 @@ class GridworldEnv(gym.Env):
         self.action_space = spaces.Discrete(15)
         # put the drone in
         self.map_volume[altitude]['drone'][local_y, local_x] = 1.0
+        #put the hiker in
+        self.map_volume[0]['hiker'][hiker_y,hiker_x] = 1.0
 
         self.actionvalue_heading_action = {
             0: {1:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
@@ -212,21 +216,24 @@ class GridworldEnv(gym.Env):
     #         self._render()
 
     def take_action(self,delta_alt=0,delta_x=0,delta_y=0,new_heading=1):
-        print("take action called",delta_alt,delta_x,delta_y,new_heading)
+        #print("take action called",delta_alt,delta_x,delta_y,new_heading)
         local_coordinates = self.map_volume[self.altitude]['drone'].nonzero()
         if int(local_coordinates[0]) + delta_y < 0 or  \
             int(local_coordinates[1]) + delta_x < 0 or \
             int(local_coordinates[0] + delta_y > 19) or \
             int(local_coordinates[1] + delta_x > 19):
-            print('take_action returning 0')
+            #print('take_action returning 0')
             return 0
-        print("this happened")
+        #print("this happened")
         self.map_volume[self.altitude]['drone'][local_coordinates[0],local_coordinates[1]] = 0.0
         self.map_volume[self.altitude + delta_alt]['drone'][local_coordinates[0]+delta_y,local_coordinates[1]+delta_x] = 1.0
         self.altitude += delta_alt
         self.heading = new_heading
         return 1
 
+    def check_for_hiker(self):
+        local_coordinates = self.map_volume[self.altitude]['drone'].nonzero()
+        return int(self.map_volume[0]['hiker'][int(local_coordinates[0]),int(local_coordinates[1])])
 
 
     def check_for_crash(self):
@@ -476,13 +483,19 @@ class GridworldEnv(gym.Env):
         return (a, b, c, d) 
 
 
-a = GridworldEnv(map_x=70,map_y=50,local_x=2,local_y=2,heading=1,altitude=2)
+a = GridworldEnv(map_x=70,map_y=50,local_x=2,local_y=2,hiker_x=10,heading=1,altitude=2)
 
-for i in range(100):
-    a.step(5)
+for i in range(10000):
+    a.step(random.randint(5,9))
     local_coordinates = a.map_volume[a.altitude]['drone'].nonzero()
     print("coordinates", local_coordinates)
-    a.check_for_crash()
+    if a.check_for_crash():
+        print("crash")
+        break
+    if a.check_for_hiker():
+        print("hiker after", i)
+        break
+
 
 #print(a.check_for_crash())
 print('complete')
