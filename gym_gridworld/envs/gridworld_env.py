@@ -44,7 +44,7 @@ class GridworldEnv(gym.Env):
                 2:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=-1,new_heading=8)',
                 3:'self.take_action(delta_alt=-1,delta_x=0,delta_y=-1,new_heading=1)',
                 4:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=2)',
-                5:'self.take_action(delta_alt=-1,delta_x=1,delta_y=-1,new_heading=3)',
+                5:'self.take_action(delta_alt=-1,delta_x=1,delta_y=0,new_heading=3)',
                 6:'self.take_action(delta_alt=-1,delta_x=1,delta_y=1,new_heading=4)',
                 7:'self.take_action(delta_alt=-1,delta_x=0,delta_y=1,new_heading=5)',
                 8:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=1,new_heading=6)'},
@@ -84,7 +84,7 @@ class GridworldEnv(gym.Env):
                 2: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=-1, new_heading=8)',
                 3: 'self.take_action(delta_alt=0, delta_x=0, delta_y=-1, new_heading=1)',
                 4: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=2)',
-                5: 'self.take_action(delta_alt=0, delta_x=1, delta_y=-1, new_heading=3)',
+                5: 'self.take_action(delta_alt=0, delta_x=1, delta_y=0, new_heading=3)',
                 6: 'self.take_action(delta_alt=0, delta_x=1, delta_y=1, new_heading=4)',
                 7: 'self.take_action(delta_alt=0, delta_x=0, delta_y=1, new_heading=5)',
                 8: 'self.take_action(delta_alt=0, delta_x=-1, delta_y=1, new_heading=6)'},
@@ -124,7 +124,7 @@ class GridworldEnv(gym.Env):
                 2: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=-1, new_heading=8)',
                 3: 'self.take_action(delta_alt=1, delta_x=0, delta_y=-1, new_heading=1)',
                 4: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=2)',
-                5: 'self.take_action(delta_alt=1, delta_x=1, delta_y=-1, new_heading=3)',
+                5: 'self.take_action(delta_alt=1, delta_x=1, delta_y=0, new_heading=3)',
                 6: 'self.take_action(delta_alt=1, delta_x=1, delta_y=1, new_heading=4)',
                 7: 'self.take_action(delta_alt=1, delta_x=0, delta_y=1, new_heading=5)',
                 8: 'self.take_action(delta_alt=1, delta_x=-1, delta_y=1, new_heading=6)'},
@@ -212,18 +212,20 @@ class GridworldEnv(gym.Env):
     #         self._render()
 
     def take_action(self,delta_alt=0,delta_x=0,delta_y=0,new_heading=1):
-        print("take heading called",delta_alt,delta_x,delta_y,new_heading)
+        print("take action called",delta_alt,delta_x,delta_y,new_heading)
         local_coordinates = self.map_volume[self.altitude]['drone'].nonzero()
         if int(local_coordinates[0]) + delta_y < 0 or  \
             int(local_coordinates[1]) + delta_x < 0 or \
             int(local_coordinates[0] + delta_y > 19) or \
             int(local_coordinates[1] + delta_x > 19):
+            print('take_action returning 0')
             return 0
-
+        print("this happened")
         self.map_volume[self.altitude]['drone'][local_coordinates[0],local_coordinates[1]] = 0.0
         self.map_volume[self.altitude + delta_alt]['drone'][local_coordinates[0]+delta_y,local_coordinates[1]+delta_x] = 1.0
         self.altitude += delta_alt
         self.heading = new_heading
+        return 1
 
 
 
@@ -246,14 +248,14 @@ class GridworldEnv(gym.Env):
 
 
 
-    def _step(self, action):
+    def step(self, action):
         ''' return next observation, reward, finished, success '''
 
         action = int(action)
-        eval(self.actionvalue_heading_action[action][self.heading])
+        x = eval(self.actionvalue_heading_action[action][self.heading])
         crash = self.check_for_crash()
 
-        return (self.map_volume, 0, True, crash)
+        #return (self.map_volume, 0, True, crash)
 
 
 
@@ -474,6 +476,13 @@ class GridworldEnv(gym.Env):
         return (a, b, c, d) 
 
 
-a = GridworldEnv(map_x=70,map_y=50,local_x=3,local_y=0,heading=1,altitude=0)
-print(a.check_for_crash())
+a = GridworldEnv(map_x=70,map_y=50,local_x=2,local_y=2,heading=1,altitude=2)
+
+for i in range(100):
+    a.step(5)
+    local_coordinates = a.map_volume[a.altitude]['drone'].nonzero()
+    print("coordinates", local_coordinates)
+    a.check_for_crash()
+
+#print(a.check_for_crash())
 print('complete')
