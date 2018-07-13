@@ -379,11 +379,19 @@ class GridworldEnv(gym.Env):
 
     def reset(self):
         print('XXXXXX RESET XXXXXX')
-        local_x = 2
-        local_y = 2
-        altitude = 2
+        local_x = random.randint(3,17)
+        local_y = random.randint(3,17)
+        altitude = random.randint(2,3)
+        heading = random.randint(1,8)
         hiker_x = 5
         hiker_y = 5
+        while 1:
+            hiker_x = random.randint(3,17)
+            hiker_y = random.randint(3,17)
+            if (hiker_x,hiker_y) == (local_x,local_y):
+                continue
+            break
+
         heading = 1
         self.agent_state = copy.deepcopy(self.agent_start_state)
         self.current_grid_map = copy.deepcopy(self.start_grid_map)
