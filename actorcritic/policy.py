@@ -23,8 +23,8 @@ class FullyConvPolicy:
         conv1 = layers.conv2d(
             inputs=inputs,
             data_format="NHWC",
-            num_outputs=32,
-            kernel_size=5,
+            num_outputs=16,
+            kernel_size=2,
             stride=1,
             padding='SAME',
             activation_fn=tf.nn.relu,
@@ -68,27 +68,37 @@ class FullyConvPolicy:
         #     num_classes=MINIMAP_FEATURES.player_relative.scale
         # )[:, :, :, 1:]
         #
-        # channel_axis = 3
-        # screen_numeric_all = tf.concat(
-        #     [self.placeholders.screen_numeric, units_embedded, player_relative_screen_one_hot],
-        #     axis=channel_axis
-        # )
-        # minimap_numeric_all = tf.concat(
-        #     [self.placeholders.minimap_numeric, player_relative_minimap_one_hot],
-        #     axis=channel_axis
-        # )
+        #channel_axis = 4
+        alt0_all = tf.concat(
+            [self.placeholders.alt0_grass, self.placeholders.alt0_bush, self.placeholders.alt0_drone, self.placeholders.alt0_hiker],
+            axis=2
+        )
+        alt1_all = tf.concat(
+            [self.placeholders.alt1_pine, self.placeholders.alt1_pines, self.placeholders.alt1_drone],
+            axis=2
+        )
+        alt2_all = tf.concat(
+            [self.placeholders.alt2_drone],
+            axis=2
+        )
+        alt3_all = tf.concat(
+            [self.placeholders.alt3_drone],
+            axis=2
+        )
         # self.screen_output = self._build_convs(screen_numeric_all, "screen_network")
         # self.minimap_output = self._build_convs(minimap_numeric_all, "minimap_network")
-        screen_px = self.placeholders.rgb_screen#tf.cast(self.placeholders.rgb_screen, tf.float32) / 255. # rgb_screen are integers (0-255) and here we convert to float and normalize
+        #screen_px = self.placeholders.alt0_grass#tf.cast(self.placeholders.rgb_screen, tf.float32) / 255. # rgb_screen are integers (0-255) and here we convert to float and normalize
         #minimap_px = tf.cast(self.placeholders.rgb_screen, tf.float32) / 255.
-        self.screen_output = self._build_convs(screen_px, "screen_network")
-        #self.minimap_output = self._build_convs(minimap_px, "minimap_network")
+        self.alt0_output = self._build_convs(alt0_all, "alt0_network")
+        self.alt1_output = self._build_convs(alt1_all, "alt1_network")
+        self.alt2_output = self._build_convs(alt2_all, "alt2_network")
+        self.alt3_output = self._build_convs(alt3_all, "alt3_network")
 
         """(MINE) As described in the paper, the state representation is then formed by the concatenation
         of the screen and minimap outputs as well as the broadcast vector stats, along the channer dimension"""
         # State representation (last layer before separation as described in the paper)
-        #self.map_output = tf.concat([self.screen_output, self.minimap_output], axis=channel_axis)
-        #self.map_output = self.screen_output
+        self.map_output = tf.concat([self.alt0_output, self.alt1_output, self.alt2_output, self.alt3_output], axis=2)
+        #self.map_output = self.alt1_output
 
         # The output layer (conv) of the spatial action policy with one ouput. So this means that there is a 1-1 mapping
         # (no filter that convolvues here) between layer and output. So eventually for every position of the layer you get
@@ -106,7 +116,7 @@ class FullyConvPolicy:
         #
         # spatial_action_probs = tf.nn.softmax(layers.flatten(self.spatial_action_logits))
 
-        map_output_flat = layers.flatten(self.screen_output)
+        map_output_flat = layers.flatten(self.map_output)
         # (MINE) This is the last layer (fully connected -fc) for the non-spatial (categorical) actions
         fc1 = layers.fully_connected(
             map_output_flat,
@@ -119,7 +129,7 @@ class FullyConvPolicy:
         # estimate
         action_id_probs = layers.fully_connected(
             fc1,
-            num_outputs=5,#len(actions.FUNCTIONS),
+            num_outputs=15,#len(actions.FUNCTIONS),
             activation_fn=tf.nn.softmax,
             scope="action_id",
             trainable=self.trainable

@@ -15,6 +15,16 @@ LOG_DIRECTORY = '_files/summaries/Beholder_Test_MTB'
 def _get_placeholders(spatial_dim):
     sd = spatial_dim
     feature_list = [
+        (FEATURE_KEYS.alt0_grass, tf.float32, [None, 20, 20]),
+        (FEATURE_KEYS.alt0_bush, tf.float32, [None, 20, 20]),
+    # FEATURE_KEYS.available_action_ids: get_available_actions_flags(obs),
+        (FEATURE_KEYS.alt0_drone, tf.float32, [None, 20, 20]),
+        (FEATURE_KEYS.alt0_hiker, tf.float32, [None, 20, 20]),
+        (FEATURE_KEYS.alt1_pine, tf.float32, [None, 20, 20]),  # numpy.array is redundant
+        (FEATURE_KEYS.alt1_pines, tf.float32, [None, 20, 20]),
+        (FEATURE_KEYS.alt1_drone, tf.float32, [None, 20, 20]),
+        (FEATURE_KEYS.alt2_drone, tf.float32, [None, 20, 20]),
+        (FEATURE_KEYS.alt3_drone, tf.float32, [None, 20, 20]),
         (FEATURE_KEYS.minimap_numeric, tf.float32, [None, sd, sd, ObsProcesser.N_MINIMAP_CHANNELS]),
         (FEATURE_KEYS.screen_numeric, tf.float32, [None, sd, sd, ObsProcesser.N_SCREEN_CHANNELS]),
         (FEATURE_KEYS.screen_unit_type, tf.int32, [None, sd, sd]),
@@ -26,8 +36,6 @@ def _get_placeholders(spatial_dim):
         (FEATURE_KEYS.player_relative_screen, tf.int32, [None, sd, sd]),
         (FEATURE_KEYS.player_relative_minimap, tf.int32, [None, sd, sd]),
         (FEATURE_KEYS.advantage, tf.float32, [None]),
-        (FEATURE_KEYS.rgb_screen, tf.float32, [None, 128, 128, 3]),
-        (FEATURE_KEYS.rgb_minimap, tf.float32, [None, 64, 64, 3]),
     ]
     return AgentInputTuple(
         **{name: tf.placeholder(dtype, shape, name) for name, dtype, shape in feature_list}

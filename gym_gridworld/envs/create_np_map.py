@@ -1,9 +1,9 @@
 import os
 import pickle
 import numpy as np
-from mapquery import terrain_request
+from gym_gridworld.envs.mapquery import terrain_request
 from pathlib import Path
-
+path='./gym_gridworld/'
 # map = pickle.load(open('050070.dict','rb'))
 # top_left = (50,70)
 # #make the volume
@@ -67,9 +67,9 @@ def convert_map_to_volume_dict(x,y,map):
     #save before returning
     #todo fix value_feature_map and feature_maps -> they should be the same (except inside out)
     print("saving value/feature maps")
-    with open('features/features_to_values.dict', 'wb') as handle:
+    with open(path+'features/features_to_values.dict', 'wb') as handle:
         pickle.dump(feature_value_map, handle)
-    with open('features/values_to_features.dict', 'wb') as handle:
+    with open(path+'features/values_to_features.dict', 'wb') as handle:
         pickle.dump(value_feature_map,handle)
 
     for i in range(len(vol)):
@@ -105,23 +105,24 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
     #does the map already exist in the maps/ folder?
     return_dict = {}
     filename = '{}{}.mp'.format(x,y)
+    #filename = '7050.mp'
     maps = []
     map = 0
-    for files in os.listdir('maps'):
+    for files in os.listdir(path+'maps'):
         if files.endswith(".mp"):
             maps.append(files)
     #loops through because I'll need the actual map
     for files in maps:
         if filename == files:
             print("loading existing map.")
-            map = pickle.load(open('maps/' + filename,'rb'))
+            map = pickle.load(open(path+'maps/' + filename,'rb'))
     if not map:
-        print("generating map")
+        print("generating map. YOU NEED MAVSIM RUNNING!!!")
         map = terrain_request(x,y,width,height)
 
         #store it for future use
         print("saving map.")
-        with open('maps/' + filename, 'wb') as handle:
+        with open(path+'maps/' + filename, 'wb') as handle:
             pickle.dump(map, handle)
     #convert_map_to_volume_dict(x,y,map)
     return convert_map_to_volume_dict(x,y,map)

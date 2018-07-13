@@ -32,7 +32,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool("visualize", False, "Whether to render with pygame.")
 flags.DEFINE_integer("resolution", 32, "Resolution for screen and minimap feature layers.")
 flags.DEFINE_integer("step_mul", 8, "Game steps per agent step.")
-flags.DEFINE_integer("n_envs", 1, "Number of environments to run in parallel")
+flags.DEFINE_integer("n_envs", 20, "Number of environments to run in parallel")
 flags.DEFINE_integer("episodes", 4, "Number of complete episodes")
 flags.DEFINE_integer("n_steps_per_batch", None,
     "Number of steps per batch, if None use 8 for a2c and 128 for ppo")  # (MINE) TIMESTEPS HERE!!! You need them cauz you dont want to run till it finds the beacon especially at first episodes - will take forever
@@ -40,12 +40,12 @@ flags.DEFINE_integer("all_summary_freq", 50, "Record all summaries every n batch
 flags.DEFINE_integer("scalar_summary_freq", 5, "Record scalar summaries every n batch")
 flags.DEFINE_string("checkpoint_path", "_files/models", "Path for agent checkpoints")
 flags.DEFINE_string("summary_path", "_files/summaries", "Path for tensorboard summaries")
-flags.DEFINE_string("model_name", "DefeatRoaches_pixels", "Name for checkpoints and tensorboard summaries")
-flags.DEFINE_integer("K_batches", 1000,
+flags.DEFINE_string("model_name", "Test", "Name for checkpoints and tensorboard summaries")
+flags.DEFINE_integer("K_batches", 100000,
     "Number of training batches to run in thousands, use -1 to run forever") #(MINE) not for now
 flags.DEFINE_string("map_name", "DefeatRoaches", "Name of a map to use.")
 flags.DEFINE_float("discount", 0.95, "Reward-discount for the agent")
-flags.DEFINE_boolean("training", False,
+flags.DEFINE_boolean("training", True,
     "if should train the model, if false then save only episode score summaries"
 )
 flags.DEFINE_enum("if_output_exists", "overwrite", ["fail", "overwrite", "continue"],
@@ -182,6 +182,7 @@ def main():
     # use for debugging 'Breakout-v0', Grid-v0, gridworld-v0
     #envs = VecFrameStack(make_custom_env('gridworld-v0', FLAGS.n_envs, 1), 1) # One is number of frames to stack within each env
     envs = make_custom_env('gridworld-v0', FLAGS.n_envs, 1)
+    print("Requested environments created successfully")
     #env = gym.make('gridworld-v0')
     tf.reset_default_graph()
     # The following lines fix the problem with using more than 2 envs!!!

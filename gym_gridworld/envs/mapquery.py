@@ -7,7 +7,7 @@ import struct
 
 #import actr
 import threading
-import yaml
+#import yaml
 
 import uuid
 import itertools
@@ -40,7 +40,7 @@ def terrain_request(lon=0,lat=0,width=5,height=5):
         data = data.decode('utf-8')
         tup_data = eval(data)
         if 'ERR' in tup_data:
-            raise 'Error in mavsim'
+            raise BaseException('Error in mavsim')
         #print(tup_data)
         results_dict[(tup_data[2],tup_data[3])] = (tup_data[4],tup_data[5])
 

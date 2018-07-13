@@ -89,13 +89,16 @@ class ObsProcesser:
         #feature_screen = np.copy(obs["feature_screen"]) # THIS FIXES EVERYTHING AND YOU CAN SEE THE feature_screen obs cauz of the error for max_recursions etc
         #feature_minimap = np.copy(obs["feature_minimap"])
         pp_obs = {
-            #FEATURE_KEYS.screen_numeric: self.get_screen_numeric(obs),
-            #FEATURE_KEYS.screen_unit_type: np.array(feature_screen[SCREEN_FEATURES.unit_type.index]),
-            #FEATURE_KEYS.minimap_numeric: self.get_mimimap_numeric(obs),
+            FEATURE_KEYS.alt0_grass: timestep[0]['grass'],
+            FEATURE_KEYS.alt0_bush: timestep[0]['bush'],
             #FEATURE_KEYS.available_action_ids: get_available_actions_flags(obs),
-            #FEATURE_KEYS.player_relative_screen: np.array(feature_screen[SCREEN_FEATURES.player_relative.index]),
-            #FEATURE_KEYS.player_relative_minimap: np.array(feature_minimap[MINIMAP_FEATURES.player_relative.index]),
-            FEATURE_KEYS.rgb_screen: timestep, # numpy.array is redundant
+            FEATURE_KEYS.alt0_drone: timestep[0]['drone'],
+            FEATURE_KEYS.alt0_hiker: timestep[0]['hiker'],
+            FEATURE_KEYS.alt1_pine: timestep[1]['pine tree'], # numpy.array is redundant
+            FEATURE_KEYS.alt1_pines: timestep[1]['pine trees'],
+            FEATURE_KEYS.alt1_drone: timestep[1]['drone'],
+            FEATURE_KEYS.alt2_drone: timestep[2]['drone'],
+            FEATURE_KEYS.alt3_drone: timestep[3]['drone'],
             #FEATURE_KEYS.rgb_minimap: timestep
         }
 
@@ -200,19 +203,27 @@ class ActionProcesser:
 
 
 FEATURE_LIST = (
+    "alt0_grass",
+    "alt0_bush",
+    "alt0_drone",
+    "alt0_hiker",
+    "alt1_pine",
+    "alt1_pines",
+    "alt1_drone",
+    "alt2_drone",
+    "alt3_drone",
     "minimap_numeric",
     "screen_numeric",
     "screen_unit_type",
+    "player_relative_screen",
+    "player_relative_minimap",
     "is_spatial_action_available",
     "selected_spatial_action",
     "selected_action_id",
     "available_action_ids",
     "value_target",
     "advantage",
-    "player_relative_screen",
-    "player_relative_minimap",
-    "rgb_screen",
-    "rgb_minimap"
+
 )
 
 AgentInputTuple = namedtuple("AgentInputTuple", FEATURE_LIST)

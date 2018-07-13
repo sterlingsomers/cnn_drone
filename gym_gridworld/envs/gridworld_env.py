@@ -13,8 +13,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 import random
-
-import create_np_map as CNP
+from gym_gridworld.envs import  create_np_map as CNP
 
 # define colors
 # 0: black; 1 : gray; 2 : blue; 3 : green; 4 : red
@@ -27,21 +26,64 @@ class GridworldEnv(gym.Env):
     metadata = {'render.modes': ['human']}
     num_env = 0
 
-    def __init__(self,map_x=0,map_y=0,local_x=0,local_y=0,heading=1,altitude=2,hiker_x=5,hiker_y=5,width=20,height=20):
-        self.map_volume = CNP.map_to_volume_dict(map_x,map_y,width,height)
-
-
-
+    def __init__(self):
+        # TODO: Pass the environment with arguments
+        map_x = 70
+        map_y = 50
+        local_x = 2
+        local_y = 2
+        heading = 1
+        altitude = 2
+        hiker_x = 5
+        hiker_y = 5
+        width = 20
+        height = 20
+        num_alts = 4
+        self.map_volume = CNP.map_to_volume_dict(map_x, map_y, width, height)
         #self.local_coordinates = [local_x,local_y]
         self.world_coordinates = [70,50]
+
+        ''' set observation space '''
         self.actions = list(range(15))
         self.heading = heading
         self.altitude = altitude
+
         self.action_space = spaces.Discrete(15)
+        self.obs_shape = [width, height]
+        self.observation_space = spaces.Box(low=0, high=1, shape=self.obs_shape)
+
+        ''' initialize system state '''
         # put the drone in
-        self.map_volume[altitude]['drone'][local_y, local_x] = 1.0
-        #put the hiker in
-        self.map_volume[0]['hiker'][hiker_y,hiker_x] = 1.0
+        #self.observation = copy.deepcopy(self.map_volume)
+        # self.map_volume[altitude]['drone'][local_y, local_x] = 1.0
+        # #put the hiker in
+        # self.map_volume[0]['hiker'][hiker_y,hiker_x] = 1.0
+
+        #this_file_path = os.path.dirname(os.path.realpath(__file__))
+        #self.grid_map_path = os.path.join(this_file_path, 'plan0.txt')
+        self.grid_map_shape = [width,height, num_alts]#self.start_grid_map.shape # Error, no shape here
+
+        ''' agent state: start, target, current state '''
+        self.agent_start_state = [local_x, local_y]#, _ = self._get_agent_start_target_state(self.start_grid_map)
+        self.agent_target_state = [hiker_x, hiker_y]#self._get_agent_start_target_state(self.start_grid_map)
+        self.agent_state = copy.deepcopy(self.agent_start_state)
+        print("Start:",self.agent_start_state, "Goal:", self.agent_target_state, "Current:",self.agent_state)
+
+        self.start_grid_map = self.map_volume#._read_grid_map(self.grid_map_path) # initial grid map
+        self.current_grid_map = copy.deepcopy(self.start_grid_map)  # current grid map
+        #self.observation = self.start_grid_map #Initial observation #self._gridmap_to_observation(self.start_grid_map)
+
+        ''' set other parameters '''
+        self.restart_once_done = False  # restart or not once done
+        self.verbose = False # to show the environment or not
+        self.reset()
+        GridworldEnv.num_env += 1
+        self.this_fig_num = GridworldEnv.num_env
+        if self.verbose == True:
+            self.fig = plt.figure(self.this_fig_num)
+            plt.show(block=False)
+            plt.axis('off')
+            self._render()
 
         self.actionvalue_heading_action = {
             0: {1:'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
@@ -216,8 +258,8 @@ class GridworldEnv(gym.Env):
     #         self._render()
 
     def take_action(self,delta_alt=0,delta_x=0,delta_y=0,new_heading=1):
-        #print("take action called",delta_alt,delta_x,delta_y,new_heading)
-        local_coordinates = self.map_volume[self.altitude]['drone'].nonzero()
+        print("take action called","up/down:",delta_alt,"left/right:",delta_x,"top/bottom",delta_y,"heading:",new_heading, "curr_alt:",self.altitude)
+        local_coordinates = self.observation[self.altitude]['drone'].nonzero()
         if int(local_coordinates[0]) + delta_y < 0 or  \
             int(local_coordinates[1]) + delta_x < 0 or \
             int(local_coordinates[0] + delta_y > 19) or \
@@ -225,48 +267,66 @@ class GridworldEnv(gym.Env):
             #print('take_action returning 0')
             return 0
         #print("this happened")
-        self.map_volume[self.altitude]['drone'][local_coordinates[0],local_coordinates[1]] = 0.0
-        self.map_volume[self.altitude + delta_alt]['drone'][local_coordinates[0]+delta_y,local_coordinates[1]+delta_x] = 1.0
-        self.altitude += delta_alt
+        new_alt = self.altitude + delta_alt if self.altitude + delta_alt < 4 else 3
+        self.observation[self.altitude]['drone'][local_coordinates[0], local_coordinates[1]] = 0.0
+        self.observation[new_alt]['drone'][local_coordinates[0] + delta_y, local_coordinates[1] + delta_x] = 1.0
+        self.altitude = new_alt
         self.heading = new_heading
         return 1
 
-    def check_for_hiker(self):
-        local_coordinates = self.map_volume[self.altitude]['drone'].nonzero()
-        return int(self.map_volume[0]['hiker'][int(local_coordinates[0]),int(local_coordinates[1])])
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
+    def check_for_hiker(self):
+        local_coordinates = self.observation[self.altitude]['drone'].nonzero()
+        return int(self.observation[0]['hiker'][int(local_coordinates[0]),int(local_coordinates[1])])
 
     def check_for_crash(self):
         #if drone on altitude 0, crash
-        if len(self.map_volume[0]['drone'].nonzero()[0]):
+        if len(self.observation[0]['drone'].nonzero()[0]):
             return 1
+
         #at any other altutidue, check for an object at the drone's position
-        drone_position = self.map_volume[self.altitude]['drone'].nonzero()
+        drone_position = self.observation[self.altitude]['drone'].nonzero()
+        drone_position_tup = (int(drone_position[0]),int(drone_position[1]))
+        if drone_position_tup == (0,0) or \
+            drone_position_tup == (0,19) or \
+            drone_position_tup == (19,0) or \
+            drone_position_tup == (19,19):
+            return 1
         for i in range(self.altitude,4):
 
-            for key in self.map_volume[i]:
+            for key in self.observation[i]:
                 if key == 'drone' or key == 'map':
                     continue
                 #just check if drone position is returns a non-zero
-                if self.map_volume[i][key][int(drone_position[0]),int(drone_position[1])]:
+                if self.observation[i][key][int(drone_position[0]),int(drone_position[1])]:
                     return 1
         return 0
-
-
-
 
     def step(self, action):
         ''' return next observation, reward, finished, success '''
 
         action = int(action)
+        print("action taken", action)
+        info = {}
+        info['success'] = False
+        done = False
+        reward = 0
         x = eval(self.actionvalue_heading_action[action][self.heading])
         crash = self.check_for_crash()
+        info['success'] = not crash
+        if crash:
+            reward = -1
+            done = True
+        if self.check_for_hiker():
+            done = True
+            reward = 1
+        print("state", self.observation[self.altitude]['drone'].nonzero())
+        return (self.observation, reward, done, info)
 
-        #return (self.map_volume, 0, True, crash)
-
-
-
-        return 0
+        #return 0
 
 
 
@@ -317,10 +377,23 @@ class GridworldEnv(gym.Env):
         #     info['success'] = True
         #     return (self.observation, 0, False, info)
 
-    def _reset(self):
+    def reset(self):
+        print('XXXXXX RESET XXXXXX')
+        local_x = 2
+        local_y = 2
+        altitude = 2
+        hiker_x = 5
+        hiker_y = 5
+        heading = 1
         self.agent_state = copy.deepcopy(self.agent_start_state)
         self.current_grid_map = copy.deepcopy(self.start_grid_map)
-        self.observation = self._gridmap_to_observation(self.start_grid_map)
+        self.observation = copy.deepcopy(self.map_volume)
+        self.observation[altitude]['drone'][local_y, local_x] = 1.0
+        self.altitude = altitude
+        self.heading = heading
+        #put the hiker in
+        self.observation[0]['hiker'][hiker_y,hiker_x] = 1.0
+        #self.observation = self.start_grid_map#self._gridmap_to_observation(self.start_grid_map) # The map contains the obs, here is the starting map
         self._render()
         return self.observation
 
@@ -397,8 +470,7 @@ class GridworldEnv(gym.Env):
             self._reset()
             self._render()
         return True
-        
-    
+
     def change_target_state(self, tg):
         if self.agent_target_state[0] == tg[0] and self.agent_target_state[1] == tg[1]:
             _ = self._reset()
@@ -483,18 +555,18 @@ class GridworldEnv(gym.Env):
         return (a, b, c, d) 
 
 
-a = GridworldEnv(map_x=70,map_y=50,local_x=2,local_y=2,hiker_x=10,heading=1,altitude=2)
-
-for i in range(10000):
-    a.step(random.randint(5,9))
-    local_coordinates = a.map_volume[a.altitude]['drone'].nonzero()
-    print("coordinates", local_coordinates)
-    if a.check_for_crash():
-        print("crash")
-        break
-    if a.check_for_hiker():
-        print("hiker after", i)
-        break
+# a = GridworldEnv(map_x=70,map_y=50,local_x=2,local_y=2,hiker_x=10,heading=1,altitude=2)
+#
+# for i in range(10000):
+#     a.step(random.randint(5,9))
+#     local_coordinates = a.map_volume[a.altitude]['drone'].nonzero()
+#     print("coordinates", local_coordinates)
+#     if a.check_for_crash():
+#         print("crash")
+#         break
+#     if a.check_for_hiker():
+#         print("hiker after", i)
+#         break
 
 
 #print(a.check_for_crash())
