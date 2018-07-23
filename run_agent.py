@@ -32,7 +32,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_bool("visualize", False, "Whether to render with pygame.")
 flags.DEFINE_integer("resolution", 32, "Resolution for screen and minimap feature layers.")
 flags.DEFINE_integer("step_mul", 8, "Game steps per agent step.")
-flags.DEFINE_integer("n_envs", 20, "Number of environments to run in parallel")
+flags.DEFINE_integer("n_envs", 16, "Number of environments to run in parallel")
 flags.DEFINE_integer("episodes", 4, "Number of complete episodes")
 flags.DEFINE_integer("n_steps_per_batch", None,
     "Number of steps per batch, if None use 8 for a2c and 128 for ppo")  # (MINE) TIMESTEPS HERE!!! You need them cauz you dont want to run till it finds the beacon especially at first episodes - will take forever
@@ -41,7 +41,7 @@ flags.DEFINE_integer("scalar_summary_freq", 5, "Record scalar summaries every n 
 flags.DEFINE_string("checkpoint_path", "_files/models", "Path for agent checkpoints")
 flags.DEFINE_string("summary_path", "_files/summaries", "Path for tensorboard summaries")
 flags.DEFINE_string("model_name", "Test", "Name for checkpoints and tensorboard summaries")
-flags.DEFINE_integer("K_batches", 100000,
+flags.DEFINE_integer("K_batches", 5000,
     "Number of training batches to run in thousands, use -1 to run forever") #(MINE) not for now
 flags.DEFINE_string("map_name", "DefeatRoaches", "Name of a map to use.")
 flags.DEFINE_float("discount", 0.95, "Reward-discount for the agent")

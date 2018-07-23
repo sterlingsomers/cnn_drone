@@ -58,7 +58,7 @@ class Runner(object):
         #(MINE) This timestep is actually the last set of feature observations
         #score = timestep.observation["score_cumulative"][0]
         self.score = (self.score + timestep) # //self.episode_counter # It is zero at the beginning so you get inf
-        print("episode %d ended. Score %f" % (self.episode_counter, self.score))
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>episode %d ended. Score %f" % (self.episode_counter, self.score))
         self._log_score_to_tb(self.score)
         self.episode_counter += 1
 
@@ -85,7 +85,6 @@ class Runner(object):
             # could calculate value estimate from obs when do training
             # but saving values here will make n step reward calculation a bit easier
             action_ids, value_estimate = self.agent.step(latest_obs)
-            print('step: ', n, action_ids, value_estimate)  # (MINE)
             # (MINE) Store actions and value estimates for all steps
             mb_values[:, n] = value_estimate
             mb_obs.append(latest_obs)
@@ -95,6 +94,7 @@ class Runner(object):
             obs_raw = self.envs.step(action_ids)
             #obs_raw.reward = reward
             latest_obs = self.obs_processer.process(obs_raw[0]) # For obs_raw as tuple! #(MINE) =state(t+1). Processes all inputs/obs from all timesteps (and envs)
+            print('|step:', n, '|actions:',action_ids, '|rewards:', np.round(obs_raw[1],3))  # (MINE)
             mb_rewards[:, n] = [t for t in obs_raw[1]]
 
             #Check for all t (timestep/observation in obs_raw which t has the last state true, meaning it is the last state

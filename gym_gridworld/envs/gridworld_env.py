@@ -67,7 +67,7 @@ class GridworldEnv(gym.Env):
         self.agent_start_state = [local_x, local_y]#, _ = self._get_agent_start_target_state(self.start_grid_map)
         self.agent_target_state = [hiker_x, hiker_y]#self._get_agent_start_target_state(self.start_grid_map)
         self.agent_state = copy.deepcopy(self.agent_start_state)
-        print("Start:",self.agent_start_state, "Goal:", self.agent_target_state, "Current:",self.agent_state)
+        #print("Start:",self.agent_start_state, "Goal:", self.agent_target_state, "Current:",self.agent_state)
 
         self.start_grid_map = self.map_volume#._read_grid_map(self.grid_map_path) # initial grid map
         self.current_grid_map = copy.deepcopy(self.start_grid_map)  # current grid map
@@ -76,7 +76,7 @@ class GridworldEnv(gym.Env):
         ''' set other parameters '''
         self.restart_once_done = False  # restart or not once done
         self.verbose = False # to show the environment or not
-        self.reset()
+        #self.reset()
         GridworldEnv.num_env += 1
         self.this_fig_num = GridworldEnv.num_env
         if self.verbose == True:
@@ -258,7 +258,7 @@ class GridworldEnv(gym.Env):
     #         self._render()
 
     def take_action(self,delta_alt=0,delta_x=0,delta_y=0,new_heading=1):
-        print("take action called","up/down:",delta_alt,"left/right:",delta_x,"top/bottom",delta_y,"heading:",new_heading, "curr_alt:",self.altitude)
+        #print("take action called","up/down:",delta_alt,"left/right:",delta_x,"top/bottom",delta_y,"heading:",new_heading, "curr_alt:",self.altitude)
         local_coordinates = self.observation[self.altitude]['drone'].nonzero()
         if int(local_coordinates[0]) + delta_y < 0 or  \
             int(local_coordinates[1]) + delta_x < 0 or \
@@ -268,6 +268,7 @@ class GridworldEnv(gym.Env):
             return 0
         #print("this happened")
         new_alt = self.altitude + delta_alt if self.altitude + delta_alt < 4 else 3
+        #new_alt = self.altitude + delta_alt if self.altitude + delta_alt < 2 else 1
         self.observation[self.altitude]['drone'][local_coordinates[0], local_coordinates[1]] = 0.0
         self.observation[new_alt]['drone'][local_coordinates[0] + delta_y, local_coordinates[1] + delta_x] = 1.0
         self.altitude = new_alt
@@ -309,21 +310,28 @@ class GridworldEnv(gym.Env):
         ''' return next observation, reward, finished, success '''
 
         action = int(action)
-        print("action taken", action)
+        #print("action taken", action)
         info = {}
         info['success'] = False
         done = False
-        reward = 0
+        drone = [self.observation[self.altitude]['drone'].nonzero()[0][0],
+                 self.observation[self.altitude]['drone'].nonzero()[1][0], self.altitude]
+        hiker = [self.observation[0]['hiker'].nonzero()[0][0], self.observation[0]['hiker'].nonzero()[1][0], 0]
+        dist = np.linalg.norm(np.array(drone) - np.array(hiker))
         x = eval(self.actionvalue_heading_action[action][self.heading])
         crash = self.check_for_crash()
         info['success'] = not crash
         if crash:
             reward = -1
             done = True
+            print("CRASH")
+            return (self.observation, reward, done, info)
+        reward = 1 / dist # Put it here to avoid dividing by zero when you crash on the hiker
         if self.check_for_hiker():
             done = True
-            reward = 1
-        print("state", self.observation[self.altitude]['drone'].nonzero())
+            reward = 1 + 1/dist
+            print('SUCCESS!!!')
+        #print("state", [ self.observation[self.altitude]['drone'].nonzero()[0][0],self.observation[self.altitude]['drone'].nonzero()[1][0]] )
         return (self.observation, reward, done, info)
 
         #return 0
@@ -378,21 +386,25 @@ class GridworldEnv(gym.Env):
         #     return (self.observation, 0, False, info)
 
     def reset(self):
-        print('XXXXXX RESET XXXXXX')
-        local_x = random.randint(3,17)
-        local_y = random.randint(3,17)
-        altitude = random.randint(2,3)
-        heading = random.randint(1,8)
+        #print('XXXXXX RESET XXXXXX')
+        # local_x = random.randint(3,17)
+        # local_y = random.randint(3,17)
+        # altitude = random.randint(2,3)
+        # heading = random.randint(1,8)
+        local_x = 2
+        local_y = 2
+        heading = 1
+        altitude = 2
         hiker_x = 5
         hiker_y = 5
-        while 1:
-            hiker_x = random.randint(3,17)
-            hiker_y = random.randint(3,17)
-            if (hiker_x,hiker_y) == (local_x,local_y):
-                continue
-            break
+        # while 1:
+        #     hiker_x = random.randint(3,17)
+        #     hiker_y = random.randint(3,17)
+        #     if (hiker_x,hiker_y) == (local_x,local_y):
+        #         continue
+        #     break
 
-        heading = 1
+        #heading = 1
         self.agent_state = copy.deepcopy(self.agent_start_state)
         self.current_grid_map = copy.deepcopy(self.start_grid_map)
         self.observation = copy.deepcopy(self.map_volume)
@@ -402,6 +414,7 @@ class GridworldEnv(gym.Env):
         #put the hiker in
         self.observation[0]['hiker'][hiker_y,hiker_x] = 1.0
         #self.observation = self.start_grid_map#self._gridmap_to_observation(self.start_grid_map) # The map contains the obs, here is the starting map
+        #print("Start:", [local_x, local_y], "Goal:", [hiker_x,hiker_y])
         self._render()
         return self.observation
 
