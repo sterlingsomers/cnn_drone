@@ -99,7 +99,7 @@ class ObsProcesser:
             FEATURE_KEYS.alt1_drone: timestep[1]['drone'],
             FEATURE_KEYS.alt2_drone: timestep[2]['drone'],
             FEATURE_KEYS.alt3_drone: timestep[3]['drone'],
-            #FEATURE_KEYS.rgb_minimap: timestep
+            FEATURE_KEYS.rgb_screen: timestep
         }
 
         # pp_obs = {
@@ -217,6 +217,7 @@ FEATURE_LIST = (
     "screen_unit_type",
     "player_relative_screen",
     "player_relative_minimap",
+    "rgb_screen",
     "is_spatial_action_available",
     "selected_spatial_action",
     "selected_action_id",

@@ -68,7 +68,7 @@ class FullyConvPolicy:
         #     num_classes=MINIMAP_FEATURES.player_relative.scale
         # )[:, :, :, 1:]
         #
-        channel_axis = 2
+        #channel_axis = 2
         # alt0_all = tf.concat(
         #     [self.placeholders.alt0_grass, self.placeholders.alt0_bush, self.placeholders.alt0_drone, self.placeholders.alt0_hiker],
         #     axis=channel_axis
@@ -87,25 +87,26 @@ class FullyConvPolicy:
         # )
 
         # VOLUMETRIC APPROACH
-        alt_all = tf.concat(
-            [self.placeholders.alt0_grass, self.placeholders.alt0_bush, self.placeholders.alt0_drone, self.placeholders.alt0_hiker,
-             self.placeholders.alt1_pine, self.placeholders.alt1_pines, self.placeholders.alt1_drone, self.placeholders.alt2_drone,
-             self.placeholders.alt3_drone],
-            axis=channel_axis
-        )
-        self.spatial_action_logits = layers.conv2d(
-            alt_all,
-            data_format="NHWC",
-            num_outputs=1,
-            kernel_size=1,
-            stride=1,
-            activation_fn=None,
-            scope='spatial_action',
-            trainable=self.trainable
-        )
+        # alt_all = tf.concat(
+        #     [self.placeholders.alt0_grass, self.placeholders.alt0_bush, self.placeholders.alt0_drone, self.placeholders.alt0_hiker,
+        #      self.placeholders.alt1_pine, self.placeholders.alt1_pines, self.placeholders.alt1_drone, self.placeholders.alt2_drone,
+        #      self.placeholders.alt3_drone],
+        #     axis=channel_axis
+        # )
+        # self.spatial_action_logits = layers.conv2d(
+        #     alt_all,
+        #     data_format="NHWC",
+        #     num_outputs=1,
+        #     kernel_size=1,
+        #     stride=1,
+        #     activation_fn=None,
+        #     scope='spatial_action',
+        #     trainable=self.trainable
+        # )
         # self.screen_output = self._build_convs(screen_numeric_all, "screen_network")
         # self.minimap_output = self._build_convs(minimap_numeric_all, "minimap_network")
-        #screen_px = self.placeholders.alt0_grass#tf.cast(self.placeholders.rgb_screen, tf.float32) / 255. # rgb_screen are integers (0-255) and here we convert to float and normalize
+        screen_px = tf.cast(self.placeholders.rgb_screen, tf.float32) / 255. # rgb_screen are integers (0-255) and here we convert to float and normalize
+        self.screen_output = self._build_convs(screen_px, "screen_network")
         #minimap_px = tf.cast(self.placeholders.rgb_screen, tf.float32) / 255.
         # self.alt0_output = self._build_convs(alt0_all, "alt0_network")
         # self.alt1_output = self._build_convs(alt1_all, "alt1_network")
@@ -113,15 +114,14 @@ class FullyConvPolicy:
         # self.alt3_output = self._build_convs(alt3_all, "alt3_network")
 
         # VOLUMETRIC APPROACH
-        self.alt0_output = self._build_convs(self.spatial_action_logits, "alt0_network")
+        # self.alt0_output = self._build_convs(self.spatial_action_logits, "alt0_network")
 
         """(MINE) As described in the paper, the state representation is then formed by the concatenation
         of the screen and minimap outputs as well as the broadcast vector stats, along the channer dimension"""
         # State representation (last layer before separation as described in the paper)
         #self.map_output = tf.concat([self.alt0_output, self.alt1_output, self.alt2_output, self.alt3_output], axis=2)
         #self.map_output = tf.concat([self.alt0_output, self.alt1_output], axis=2)
-        self.map_output = self.alt0_output
-
+        self.map_output = self.screen_output
         # The output layer (conv) of the spatial action policy with one ouput. So this means that there is a 1-1 mapping
         # (no filter that convolvues here) between layer and output. So eventually for every position of the layer you get
         # one value. Then you flatten it and you pass it into a softmax to get probs.

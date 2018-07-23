@@ -9,11 +9,11 @@ from gym.utils import seeding
 import numpy as np
 from PIL import Image as Image
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 import random
-from gym_gridworld.envs import  create_np_map as CNP
+from gym_gridworld.envs import create_np_map as CNP
 
 # define colors
 # 0: black; 1 : gray; 2 : blue; 3 : green; 4 : red
