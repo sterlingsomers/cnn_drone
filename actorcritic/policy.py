@@ -18,14 +18,15 @@ class FullyConvPolicy:
         self.placeholders = agent.placeholders
         self.trainable = trainable
         self.unittype_emb_dim = agent.unit_type_emb_dim
+        self.num_actions = agent.num_actions
 
     def _build_convs(self, inputs, name):
         conv1 = layers.conv2d(
             inputs=inputs,
             data_format="NHWC",
             num_outputs=32,
-            kernel_size=4,
-            stride=1,
+            kernel_size=8,
+            stride=4,
             padding='SAME',
             activation_fn=tf.nn.relu,
             scope="%s/conv1" % name,
@@ -34,7 +35,7 @@ class FullyConvPolicy:
         conv2 = layers.conv2d(
             inputs=conv1,
             data_format="NHWC",
-            num_outputs=16,
+            num_outputs=64,
             kernel_size=4,
             stride=1,
             padding='SAME',
@@ -42,10 +43,22 @@ class FullyConvPolicy:
             scope="%s/conv2" % name,
             trainable=self.trainable
         )
+        # conv3 = layers.conv2d(
+        #     inputs=conv2,
+        #     data_format="NHWC",
+        #     num_outputs=64,
+        #     kernel_size=4,
+        #     stride=1,
+        #     padding='SAME',
+        #     activation_fn=tf.nn.relu,
+        #     scope="%s/conv3" % name,
+        #     trainable=self.trainable
+        # )
 
         if self.trainable:
             layers.summarize_activation(conv1)
             layers.summarize_activation(conv2)
+            # layers.summarize_activation(conv3)
 
         return conv2
 
@@ -151,7 +164,7 @@ class FullyConvPolicy:
         # estimate
         action_id_probs = layers.fully_connected(
             fc1,
-            num_outputs=15,#len(actions.FUNCTIONS),
+            num_outputs=self.num_actions,#len(actions.FUNCTIONS),
             activation_fn=tf.nn.softmax,
             scope="action_id",
             trainable=self.trainable

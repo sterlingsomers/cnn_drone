@@ -44,21 +44,38 @@ def convert_map_to_volume_dict(x,y,map):
     return_dict = {}
     top_left = (x,y)
     feature_value_map = {}
+    img = np.zeros((20,20,3),dtype=np.uint8)
     vol = np.zeros((5, 20, 20))
+    flat = np.zeros((20,20))
+    # color_map = {1:[153,255,153],2:[156,73,0],3:[0,204,0],
+    #              4:[0,102,51],5:[135,135,0],6:[202,202,0],
+    #              7:[255,255,0], 8:[255,180,0], 9:[200,5,0],50:[255,0,0]}
+    color_map = {'pine tree':[0,100,14],'pine trees':[0,172,23],'grass':[121,151,0],
+                 'bush':[121,151,0],'bushes':[164,203,8],'trail':[145,116,0],
+                 'water':[0,34,255],
+                 'drone':{0:[102,0,102],1:[255,0,255],2:[102,0,51],3:[255,0,127],4:[255,0,0]},
+                 'hiker':[255,0,0]}
     #load value maps: feature -> value and value -> feature
     #feature_value_map = {} #{[alt,feature]:value}
     #value_feature_map = {} #{value:(alt,feature)}
     feature_value_map,value_feature_map = get_feature_value_maps(x,y,map)
-    index = 1
-    alt_index = {0:1,1:1,2:1,3:1,4:1}
+    value = 1.0
     for xy, feat in map.items():
-        if feat not in list(feature_value_map.keys()):
-            feature_value_map[feat] = index#alt_index[feat[0]]
-            value_feature_map[index] = feat
-            index+=1#alt_index[feat[0]] += 1
+        if feat[1] not in list(feature_value_map.keys()):
+            #feature_value_map[feat[1]] = {}
 
-        vol[feat[0],xy[1]-top_left[1],xy[0]-top_left[0]] = feature_value_map[feat]
+            #for i in range(5):
+            feature_value_map[feat[1]] = {'val': value, 'color':color_map[feat[1]]}
+            value_feature_map[value] = {'feature':feat[1], 'alt':float(feat[0]), 'color':color_map[feat[1]]}
+            value += 1
 
+            #value += 20
+        #put it in the flat
+        flat[xy[1] - top_left[1], xy[0] - top_left[0]] = feature_value_map[feat[1]]['val']
+        img[xy[1]- top_left[1], xy[0] - top_left[0], :] = feature_value_map[feat[1]]['color']
+        #project it downwards through the volume
+        for z in range(feat[0],-1,-1):
+            vol[z,xy[1] - top_left[1],xy[0] - top_left[0]] = feature_value_map[feat[1]]['val']
 
 
 
@@ -66,37 +83,67 @@ def convert_map_to_volume_dict(x,y,map):
     return_dict['value_feature_map'] = value_feature_map
     #save before returning
     #todo fix value_feature_map and feature_maps -> they should be the same (except inside out)
-    print("saving value/feature maps")
-    with open(path+'features/features_to_values.dict', 'wb') as handle:
-        pickle.dump(feature_value_map, handle)
-    with open(path+'features/values_to_features.dict', 'wb') as handle:
-        pickle.dump(value_feature_map,handle)
+    #print("saving value/feature maps")
+    # with open(path+'features/features_to_values.dict', 'wb') as handle:
+    #     pickle.dump(feature_value_map, handle)
+    # with open(path+'features/values_to_features.dict', 'wb') as handle:
+    #     pickle.dump(value_feature_map,handle)
 
-    for i in range(len(vol)):
-        key_string = i#'alt{}'.format(i)
-        if key_string not in return_dict:
-            return_dict[key_string] = {}
-            return_dict[key_string]['map'] = vol[i]
+    return_dict['vol'] = vol
+    return_dict['flat'] = flat
+    return_dict['img'] = img
 
-        #what features are at that altitude?
-        current_features = []
-        for value,feature in value_feature_map.items():
-            if feature[0] == i:
-                current_features.append(feature[1])
+    #add the hiker and the drone
+    feature_value_map['hiker'] = {}
+    feature_value_map['drone'] = {}
+    #drone
+    # value += 20
+    value = max(list(value_feature_map.keys())) + 1
+    for i in range(5):
+        feature_value_map['drone'][i] = {'val': value, 'color': color_map['drone'][i]}
+        value_feature_map[value] = {'feature': 'drone'}
+        value += 1
 
-        current_features.append('drone')
-        if i == 0:
-            current_features.append('hiker')
 
-        for current_feature in current_features:
-            return_dict[key_string][current_feature] = np.zeros((20,20))
 
-        non_zeros = np.transpose(vol[i].nonzero())
-        for non_zero in non_zeros:
-            feature = value_feature_map[vol[i][non_zero[0]][non_zero[1]]][1]
-            #return_dict[key_string][feature][non_zero[0][non_zero[1]]] = 1.0
-            return_dict[key_string][feature][non_zero[0],non_zero[1]] = 1.0
-            #buil
+    #hiker - reserving 50
+    value = 50#max(list(value_feature_map.keys())) + 20
+
+    #for i in range(5):
+    feature_value_map['hiker']['val'] = value
+    feature_value_map['hiker']['color'] = color_map['hiker']
+    value_feature_map[value] = {'feature':'hiker', 'alt':0, 'color':color_map['hiker']}
+
+
+
+
+
+
+    # for i in range(len(vol)):
+    #     key_string = i#'alt{}'.format(i)
+    #     if key_string not in return_dict:
+    #         return_dict[key_string] = {}
+    #         return_dict[key_string]['map'] = vol[i]
+    #
+    #     #what features are at that altitude?
+    #     current_features = []
+    #     for value,feature in value_feature_map.items():
+    #         if feature[0] == i:
+    #             current_features.append(feature[1])
+    #
+    #     current_features.append('drone')
+    #     if i == 0:
+    #         current_features.append('hiker')
+    #
+    #     for current_feature in current_features:
+    #         return_dict[key_string][current_feature] = np.zeros((20,20))
+    #
+    #     non_zeros = np.transpose(vol[i].nonzero())
+    #     for non_zero in non_zeros:
+    #         feature = value_feature_map[vol[i][non_zero[0]][non_zero[1]]][1]
+    #         #return_dict[key_string][feature][non_zero[0][non_zero[1]]] = 1.0
+    #         return_dict[key_string][feature][non_zero[0],non_zero[1]] = 1.0
+    #         #buil
 
     return return_dict
 
@@ -104,8 +151,7 @@ def convert_map_to_volume_dict(x,y,map):
 def map_to_volume_dict(x=0,y=0,width=5,height=5):
     #does the map already exist in the maps/ folder?
     return_dict = {}
-    filename = '{}{}.mp'.format(x,y)
-    #filename = '7050.mp'
+    filename = '{}-{}.mp'.format(x,y)
     maps = []
     map = 0
     for files in os.listdir(path+'maps'):
@@ -114,7 +160,7 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
     #loops through because I'll need the actual map
     for files in maps:
         if filename == files:
-            print("loading existing map.")
+            #print("loading existing map.")
             map = pickle.load(open(path+'maps/' + filename,'rb'))
     if not map:
         print("generating map. YOU NEED MAVSIM RUNNING!!!")
@@ -132,6 +178,6 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
 
 
 #sample code
-#a = map_to_volume_dict(185,75,20,20)
+#a = map_to_volume_dict(70,50,20,20)
 # f,v = get_feature_value_maps(300,200,a) #300,200
 #print('complete.')

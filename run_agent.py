@@ -31,8 +31,8 @@ import gym_gridworld
 FLAGS = flags.FLAGS
 flags.DEFINE_bool("visualize", False, "Whether to render with pygame.")
 flags.DEFINE_integer("resolution", 32, "Resolution for screen and minimap feature layers.")
-flags.DEFINE_integer("step_mul", 8, "Game steps per agent step.")
-flags.DEFINE_integer("n_envs", 1, "Number of environments to run in parallel")
+flags.DEFINE_integer("step_mul", 100, "Game steps per agent step.")
+flags.DEFINE_integer("n_envs", 20, "Number of environments to run in parallel")
 flags.DEFINE_integer("episodes", 4, "Number of complete episodes")
 flags.DEFINE_integer("n_steps_per_batch", None,
     "Number of steps per batch, if None use 8 for a2c and 128 for ppo")  # (MINE) TIMESTEPS HERE!!! You need them cauz you dont want to run till it finds the beacon especially at first episodes - will take forever
@@ -97,7 +97,7 @@ flags.DEFINE_bool("profile", False, "Whether to turn on code profiling.")
 flags.DEFINE_bool("trace", False, "Whether to trace the code execution.")
 #flags.DEFINE_integer("parallel", 1, "How many instances to run in parallel.")
 
-flags.DEFINE_bool("save_replay", True, "Whether to save a replay at the end.")
+flags.DEFINE_bool("save_replay", False, "Whether to save a replay at the end.")
 
 #flags.DEFINE_string("map", None, "Name of a map to use.")
 
@@ -142,7 +142,7 @@ def make_custom_env(env_id, num_env, seed, wrapper_kwargs=None, start_index=0):
         def _thunk():
             env = gym.make(env_id)
             env.seed(seed + rank)
-            env = Monitor(env, logger.get_dir() and os.path.join(logger.get_dir(), str(rank)))
+            env = Monitor(env, logger.get_dir() and os.path.join(logger.get_dir(), str(rank)), allow_early_resets=True) # SUBPROC NEEDS 4 OUTPUS FROM STEP FUNCTION
             return env
         return _thunk
     #set_global_seeds(seed)
@@ -153,35 +153,22 @@ def main():
         check_and_handle_existing_folder(full_chekcpoint_path)
         check_and_handle_existing_folder(full_summary_path)
 
-    # env_args = dict(
-    #     map_name=FLAGS.map_name,
-    #     step_mul=FLAGS.step_mul,
-    #     game_steps_per_episode=0,
-    #     visualize=FLAGS.visualize,
-    #     agent_interface_format=sc2_env.parse_agent_interface_format(
-    #         feature_screen=FLAGS.feature_screen_size,
-    #         feature_minimap=FLAGS.feature_minimap_size,
-    #         rgb_screen=FLAGS.rgb_screen_size,
-    #         rgb_minimap=FLAGS.rgb_minimap_size,
-    #         action_space=FLAGS.action_space,
-    #         use_feature_units=FLAGS.use_feature_units),
-    #     #replay_dir='/Users/constantinos/Documents/StarcraftMAC/MyAgents/'
-    #     replay_dir='./Replays/MyAgents/'
-    # )
-
-
     #(MINE) Create multiple parallel environements (or a single instance for testing agent)
-    # if FLAGS.training and FLAGS.n_envs != 1:
-    #     envs = SubprocVecEnv((partial(make_sc2env, **env_args),) * FLAGS.n_envs)
-    #     envs = SubprocVecEnv([make_env(i,**env_args) for i in range(FLAGS.n_envs)])
-    # else:
-    #     #envs = SingleEnv(make_sc2env(**env_args))
+    if FLAGS.training and FLAGS.n_envs != 1:
+        #envs = SubprocVecEnv((partial(make_sc2env, **env_args),) * FLAGS.n_envs)
+        #envs = SubprocVecEnv([make_env(i,**env_args) for i in range(FLAGS.n_envs)])
+        envs = make_custom_env('gridworld-v0', FLAGS.n_envs, 1)
+    else:
+        #envs = make_custom_env('gridworld-v0', 1, 1)
+        envs = gym.make('gridworld-v0')
+
+        #envs = SingleEnv(make_sc2env(**env_args))
     #envs = gym.make('gridworld-v0')
     # envs = SubprocVecEnv([make_env(i) for i in range(FLAGS.n_envs)])
     # envs = VecNormalize(env)
     # use for debugging 'Breakout-v0', Grid-v0, gridworld-v0
     #envs = VecFrameStack(make_custom_env('gridworld-v0', FLAGS.n_envs, 1), 1) # One is number of frames to stack within each env
-    envs = make_custom_env('gridworld-v0', FLAGS.n_envs, 1)
+    #envs = make_custom_env('gridworld-v0', FLAGS.n_envs, 1)
     print("Requested environments created successfully")
     #env = gym.make('gridworld-v0')
     tf.reset_default_graph()
@@ -202,7 +189,8 @@ def main():
         scalar_summary_freq=FLAGS.scalar_summary_freq,
         all_summary_freq=FLAGS.all_summary_freq,
         summary_path=full_summary_path,
-        max_gradient_norm=FLAGS.max_gradient_norm
+        max_gradient_norm=FLAGS.max_gradient_norm,
+        num_actions=envs.action_space.n
     )
     # Build Agent
     agent.build_model()
@@ -235,7 +223,7 @@ def main():
         ppo_par=ppo_par
     )
 
-    runner.reset() # Reset env which means you get first observation
+    runner.reset() # Reset env which means you get first observation. You need reset if you run episodic tasks!!! SC2 is not episodic task!!!
 
     if FLAGS.K_batches >= 0:
         n_batches = FLAGS.K_batches  # (MINE) commented here so no need for thousands * 1000
@@ -248,6 +236,7 @@ def main():
 
         try:
             while True:
+                #runner.reset()
                 if i % 500 == 0:
                     _print(i)
                 if i % 4000 == 0:
@@ -261,7 +250,9 @@ def main():
             pass
     else: # Test the agent
         try:
+            #runner.reset()
             while runner.episode_counter <= (FLAGS.episodes - 1):
+                #runner.reset()
                 # You need the -1 as counting starts from zero so for counter 3 you do 4 episodes
                 runner.run_trained_batch()  # (MINE) HERE WE RUN MAIN LOOP for while true
         except KeyboardInterrupt:

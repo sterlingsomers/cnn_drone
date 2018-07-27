@@ -61,6 +61,7 @@ class Runner(object):
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>episode %d ended. Score %f" % (self.episode_counter, self.score))
         self._log_score_to_tb(self.score)
         self.episode_counter += 1
+        self.reset()
 
     def _train_ppo_epoch(self, full_input):
         total_obs = self.n_steps * self.envs.n_envs
@@ -94,7 +95,7 @@ class Runner(object):
             obs_raw = self.envs.step(action_ids)
             #obs_raw.reward = reward
             latest_obs = self.obs_processer.process(obs_raw[0]) # For obs_raw as tuple! #(MINE) =state(t+1). Processes all inputs/obs from all timesteps (and envs)
-            print('|step:', n, '|actions:',action_ids, '|rewards:', np.round(obs_raw[1],3))  # (MINE)
+            print('|step:', n, '|actions:',action_ids, '|rewards:', np.round(np.mean(obs_raw[1]),3))  # (MINE)
             mb_rewards[:, n] = [t for t in obs_raw[1]]
 
             #Check for all t (timestep/observation in obs_raw which t has the last state true, meaning it is the last state
@@ -111,70 +112,8 @@ class Runner(object):
             #     if t.last():
             #         self._handle_episode_end(t)
 
-        mb_values[:, -1] = self.agent.get_value(latest_obs)
-
-        n_step_advantage = general_n_step_advantage(
-            mb_rewards,
-            mb_values,
-            self.discount,
-            lambda_par=self.ppo_par.lambda_par if self.is_ppo else 1.0
-        )
-
-        full_input = {
-            # these are transposed because action/obs
-            # processers return [time, env, ...] shaped arrays
-            FEATURE_KEYS.advantage: n_step_advantage.transpose(),
-            FEATURE_KEYS.value_target: (n_step_advantage + mb_values[:, :-1]).transpose()
-        }
-        #(MINE) Probably we combine all experiences from every worker below
-        full_input.update(self.action_processer.combine_batch(mb_actions))
-        full_input.update(self.obs_processer.combine_batch(mb_obs))
-        full_input = {k: combine_first_dimensions(v) for k, v in full_input.items()}
-
-        if not self.do_training:
-            pass
-        elif self.agent.mode == ACMode.A2C:
-            self.agent.train(full_input)
-        elif self.agent.mode == ACMode.PPO:
-            for epoch in range(self.ppo_par.n_epochs):
-                self._train_ppo_epoch(full_input)
-            self.agent.update_theta()
-
-        self.latest_obs = latest_obs
-        self.batch_counter += 1
-        print('Batch %d finished' % self.batch_counter)
-        sys.stdout.flush()
-
-    def run_batch_solo_env(self):
-        #(MINE) MAIN LOOP!!!
-        mb_actions = []
-        mb_obs = []
-        mb_values = np.zeros((self.n_envs, self.n_steps + 1), dtype=np.float32)
-        mb_rewards = np.zeros((self.n_envs, self.n_steps), dtype=np.float32)
-
-        latest_obs = self.latest_obs # (MINE) =state(t)
-
-        for n in range(self.n_steps):
-            # could calculate value estimate from obs when do training
-            # but saving values here will make n step reward calculation a bit easier
-            action_ids, value_estimate = self.agent.step(latest_obs)
-            #print('step: ', n, action_ids, spatial_action_2ds, value_estimate)  # (MINE)
-            # (MINE) Store actions and value estimates for all steps
-            mb_values[:, n] = value_estimate
-            mb_obs.append(latest_obs)
-            mb_actions.append((action_ids))
-            # (MINE)  do action, return it to environment, get new obs and reward, store reward
-            actions_pp = self.action_processer.process(action_ids) # Actions have changed now need to check: BEFORE: actions.FunctionCall(actions.FUNCTIONS.no_op.id, []) NOW: actions.FUNCTIONS.no_op()
-            obs_raw = self.envs.step(actions_pp)
-            latest_obs = obs_raw#self.obs_processer.process(obs_raw) # (MINE) =state(t+1). Processes all inputs/obs from all timesteps (and envs)
-            mb_rewards[:, n] = [t.reward for t in obs_raw]
-
-            #Check for all t (timestep/observation in obs_raw which t has the last state true, meaning it is the last state
-            for t in obs_raw:
-                if t.last():
-                    self._handle_episode_end(t)
-
-        mb_values[:, -1] = self.agent.get_value(latest_obs)
+        print(">> Avg. Reward:",np.round(np.mean(mb_rewards),3))
+        mb_values[:, -1] = self.agent.get_value(latest_obs) # We bootstrap from last step if not terminal! although he doesnt use any check here
 
         n_step_advantage = general_n_step_advantage(
             mb_rewards,
@@ -212,21 +151,20 @@ class Runner(object):
         # state = state(0), initialized by the env.reset() in run_agent
         latest_obs = self.latest_obs # (MINE) =state(t)
         # action = agent(state)
-        action_ids, value_estimate = self.agent.step(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
+        action_ids, value_estimate = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
         #print('action: ', actions.FUNCTIONS[action_ids[0]].name, 'on', 'x=', spatial_action_2ds[0][0], 'y=', spatial_action_2ds[0][1], 'Value=', value_estimate[0])
         #actions_pp = self.action_processer.process(action_ids)
         # state(t+1) = env.step(action)
         obs_raw = self.envs.step(action_ids) # (MINE) ENVS STEP = THE ACTUAL ENVIRONMENTAL STEP
-        latest_obs = self.obs_processer.process(
-            obs_raw)  # (MINE) =process(state(t+1)). Processes all inputs/obs from all timesteps
+        latest_obs = self.obs_processer.process(obs_raw[0])  # (MINE) =process(state(t+1)). Processes all inputs/obs from all timesteps
+        print('|actions:', action_ids, '|rewards:', np.round(np.mean(obs_raw[1]), 3))
 
-        indx = 0
-        for t in obs_raw[2]:
-            if t == True:
-                # for r in obs_raw[1]: # You will double count here as t
-                self._handle_episode_end(obs_raw[1][
-                                             indx])  # The printing score process is NOT a parallel process apparrently as you input every reward (t) independently
-            indx = indx + 1
+
+
+        if obs_raw[2]:
+            # for r in obs_raw[1]: # You will double count here as t
+            self._handle_episode_end(obs_raw[1])  # The printing score process is NOT a parallel process apparrently as you input every reward (t) independently
+
         # Check for all t (timestep/observation in obs_raw which t has the last state true, meaning it is the last state
         # for t in obs_raw:
         #     if t.last():

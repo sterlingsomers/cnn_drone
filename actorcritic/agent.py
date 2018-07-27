@@ -11,7 +11,7 @@ from common.util import weighted_random_sample, select_from_each_row, ravel_inde
 import tensorboard.plugins.beholder as beholder_lib
 
 #LOG_DIRECTORY = '/tmp/beholder-demo/SCII'
-LOG_DIRECTORY = '_files/summaries/Beholder_Test_MTB'
+LOG_DIRECTORY = '_files/summaries/Test'
 def _get_placeholders(spatial_dim):
     sd = spatial_dim
     feature_list = [
@@ -33,7 +33,7 @@ def _get_placeholders(spatial_dim):
         (FEATURE_KEYS.selected_spatial_action, tf.int32, [None, 2]),
         (FEATURE_KEYS.selected_action_id, tf.int32, [None]),
         (FEATURE_KEYS.value_target, tf.float32, [None]),
-        (FEATURE_KEYS.rgb_screen, tf.float32, [None, 20, 20, 3]),
+        (FEATURE_KEYS.rgb_screen, tf.float32, [None, 100, 100, 3]),
         (FEATURE_KEYS.player_relative_screen, tf.int32, [None, sd, sd]),
         (FEATURE_KEYS.player_relative_minimap, tf.int32, [None, sd, sd]),
         (FEATURE_KEYS.advantage, tf.float32, [None]),
@@ -69,7 +69,8 @@ class ActorCriticAgent:
             max_gradient_norm=None,
             optimiser="adam",
             optimiser_pars: dict = None,
-            policy=FullyConvPolicy
+            policy=FullyConvPolicy,
+            num_actions=4
     ):
         """
         Actor-Critic Agent for learning pysc2-minigames
@@ -114,6 +115,7 @@ class ActorCriticAgent:
         self.max_gradient_norm = max_gradient_norm
         self.clip_epsilon = clip_epsilon
         self.policy = policy
+        self.num_actions= num_actions
 
         opt_class = tf.train.AdamOptimizer if optimiser == "adam" else tf.train.RMSPropOptimizer
         if optimiser_pars is None:
@@ -218,13 +220,13 @@ class ActorCriticAgent:
         # self._scalar_summary("action/selected_spatial_log_prob",
         #     tf.reduce_sum(selected_log_probs.spatial) / sum_spatial_action_available)
 
-        #tf.summary.image('spatial policy', tf.reshape(self.theta.spatial_action_logits,[-1,32,32,1]))
+        #tf.summary.image('convs output', tf.reshape(self.theta.map_output,[-1,25,25,64]))
 
         self.init_op = tf.global_variables_initializer()
         self.saver = tf.train.Saver(max_to_keep=2)
         self.all_summary_op = tf.summary.merge_all(tf.GraphKeys.SUMMARIES)
         self.scalar_summary_op = tf.summary.merge(tf.get_collection(self._scalar_summary_key))
-        #self.beholder = beholder_lib.Beholder(logdir=LOG_DIRECTORY)
+        self.beholder = beholder_lib.Beholder(logdir=LOG_DIRECTORY)
         #tf.summary.image('spatial policy', tf.reshape(self.theta.spatial_action_logits, [-1, 32, 32, 1]))
 
     def _input_to_feed_dict(self, input_dict):
@@ -234,8 +236,8 @@ class ActorCriticAgent:
         # (MINE) Pass the observations through the net
         feed_dict = self._input_to_feed_dict(obs)
 
-        action_id, value_estimate = self.sess.run(
-            [self.sampled_action_id, self.value_estimate],
+        action_id, value_estimate, convs_im = self.sess.run(
+            [self.sampled_action_id, self.value_estimate, self.theta.map_output],
             feed_dict=feed_dict
         )
 
@@ -245,15 +247,29 @@ class ActorCriticAgent:
 
         #activations= [np.reshape(images[0], (32, 32, 32)), np.reshape(images[1], (32, 32, 32)), np.reshape(images[2], (32, 32))]
         # spatial_policy_im = np.reshape(images[1], (32, 32))
+        image = np.reshape(convs_im[0], (25,25,64))
         # # Create 3 channel-image
         # spatial_policy_im = np.stack((spatial_policy_im)*3, -1).transpose()
-        # #activations= [images[0], images[1]]#, spatial_policy_im]
-        # self.beholder.update(
-        #     session=self.sess,
-        #     arrays=images[0],#activations,# + [first_of_batch] + gradient_arrays
-        #     frame=spatial_policy_im,
-        # )
+        #activations= [images[0], images[1]]#, spatial_policy_im]
+        self.beholder.update(
+            session=self.sess,
+            arrays=image,#activations,# + [first_of_batch] + gradient_arrays
+            frame=image,
+        )
         #self.summary_writer.add_summary(images[2]) # seems not working cauz of merging all
+
+        return action_id, value_estimate
+
+    def step_eval(self, obs):
+        # (MINE) Pass the observations through the net
+        ob = np.zeros((1, 100, 100, 3))
+        ob[0] = obs['rgb_screen']
+        feed_dict = {'rgb_screen:0' : ob}
+
+        action_id, value_estimate = self.sess.run(
+            [self.sampled_action_id, self.value_estimate],
+            feed_dict=feed_dict
+        )
 
         return action_id, value_estimate
 
