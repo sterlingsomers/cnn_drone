@@ -42,6 +42,7 @@ def general_n_step_advantage(
         one_step_rewards: np.ndarray,
         value_estimates: np.ndarray,
         discount: float,
+        dones: np.ndarray,
         lambda_par: float
 ):
     """
@@ -55,7 +56,8 @@ def general_n_step_advantage(
     assert 0.0 <= lambda_par <= 1.0
     batch_size, timesteps = one_step_rewards.shape
     assert value_estimates.shape == (batch_size, timesteps + 1)
-    delta = one_step_rewards + discount * value_estimates[:, 1:] - value_estimates[:, :-1]
+    delta = one_step_rewards + discount * value_estimates[:, 1:] * (1-dones) - value_estimates[:, :-1] # values: first [:,1:]=take everything from the index one and after (so the element at 0 indx will be left out
+    # value-estimates[:,:-1] means take everything and leave the last element out (all operations are for each env so thats why u have ":"
 
     if lambda_par == 0:
         return delta

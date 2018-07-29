@@ -40,13 +40,13 @@ def get_feature_value_maps(x,y,map):
 
     return (feature_value_map, value_feature_map)
 
-def convert_map_to_volume_dict(x,y,map):
+def convert_map_to_volume_dict(x,y,map,width,height):
     return_dict = {}
     top_left = (x,y)
     feature_value_map = {}
-    img = np.zeros((20,20,3),dtype=np.uint8)
-    vol = np.zeros((5, 20, 20))
-    flat = np.zeros((20,20))
+    img = np.zeros((width,height,3),dtype=np.uint8)
+    vol = np.zeros((5, width, height))
+    flat = np.zeros((width,height))
     # color_map = {1:[153,255,153],2:[156,73,0],3:[0,204,0],
     #              4:[0,102,51],5:[135,135,0],6:[202,202,0],
     #              7:[255,255,0], 8:[255,180,0], 9:[200,5,0],50:[255,0,0]}
@@ -171,7 +171,7 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
         with open(path+'maps/' + filename, 'wb') as handle:
             pickle.dump(map, handle)
     #convert_map_to_volume_dict(x,y,map)
-    return convert_map_to_volume_dict(x,y,map)
+    return convert_map_to_volume_dict(x,y,map,width,height)
 
  #   return return_dict
 

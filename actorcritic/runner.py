@@ -61,7 +61,7 @@ class Runner(object):
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>episode %d ended. Score %f" % (self.episode_counter, self.score))
         self._log_score_to_tb(self.score)
         self.episode_counter += 1
-        self.reset()
+        #self.reset() # Error if Monitor doesnt have the option to reset without an env to be done (THIS RESETS ALL ENVS!!! YOU NEED remot.send(env.reset) to reset a specific env. Else restart within the env
 
     def _train_ppo_epoch(self, full_input):
         total_obs = self.n_steps * self.envs.n_envs
@@ -79,6 +79,7 @@ class Runner(object):
         mb_obs = []
         mb_values = np.zeros((self.envs.num_envs, self.n_steps + 1), dtype=np.float32)
         mb_rewards = np.zeros((self.envs.num_envs, self.n_steps), dtype=np.float32)
+        mb_done = np.zeros((self.envs.num_envs, self.n_steps), dtype=np.int32)
 
         latest_obs = self.latest_obs # (MINE) =state(t)
 
@@ -86,6 +87,7 @@ class Runner(object):
             # could calculate value estimate from obs when do training
             # but saving values here will make n step reward calculation a bit easier
             action_ids, value_estimate = self.agent.step(latest_obs)
+            print('|step:', n, '|actions:', action_ids)  # (MINE) If you put it after the envs.step the SUCCESS appears at the envs.step so it will appear oddly
             # (MINE) Store actions and value estimates for all steps
             mb_values[:, n] = value_estimate
             mb_obs.append(latest_obs)
@@ -95,8 +97,9 @@ class Runner(object):
             obs_raw = self.envs.step(action_ids)
             #obs_raw.reward = reward
             latest_obs = self.obs_processer.process(obs_raw[0]) # For obs_raw as tuple! #(MINE) =state(t+1). Processes all inputs/obs from all timesteps (and envs)
-            print('|step:', n, '|actions:',action_ids, '|rewards:', np.round(np.mean(obs_raw[1]),3))  # (MINE)
+            print('|rewards:', np.round(np.mean(obs_raw[1]), 3))
             mb_rewards[:, n] = [t for t in obs_raw[1]]
+            mb_done[:, n] = [t for t in obs_raw[2]]
 
             #Check for all t (timestep/observation in obs_raw which t has the last state true, meaning it is the last state
             # IF MAX_STEPS OR GOAL REACHED
@@ -104,8 +107,8 @@ class Runner(object):
             #print(obs_raw[2])
             indx=0
             for t in obs_raw[2]:
-                if t == True:
-                    #for r in obs_raw[1]: # You will double count here as t
+                if t == True: # done=true
+                    # Put reward in scores
                     self._handle_episode_end(obs_raw[1][indx]) # The printing score process is NOT a parallel process apparrently as you input every reward (t) independently
                 indx = indx + 1
             # for t in obs_raw:
@@ -119,6 +122,7 @@ class Runner(object):
             mb_rewards,
             mb_values,
             self.discount,
+            mb_done,
             lambda_par=self.ppo_par.lambda_par if self.is_ppo else 1.0
         )
 
@@ -152,12 +156,10 @@ class Runner(object):
         latest_obs = self.latest_obs # (MINE) =state(t)
         # action = agent(state)
         action_ids, value_estimate = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
-        #print('action: ', actions.FUNCTIONS[action_ids[0]].name, 'on', 'x=', spatial_action_2ds[0][0], 'y=', spatial_action_2ds[0][1], 'Value=', value_estimate[0])
-        #actions_pp = self.action_processer.process(action_ids)
-        # state(t+1) = env.step(action)
+        print('|actions:', action_ids)
         obs_raw = self.envs.step(action_ids) # (MINE) ENVS STEP = THE ACTUAL ENVIRONMENTAL STEP
         latest_obs = self.obs_processer.process(obs_raw[0])  # (MINE) =process(state(t+1)). Processes all inputs/obs from all timesteps
-        print('|actions:', action_ids, '|rewards:', np.round(np.mean(obs_raw[1]), 3))
+        print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
 
 
 
