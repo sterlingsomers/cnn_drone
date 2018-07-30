@@ -41,7 +41,7 @@ class GridworldEnv(gym.Env):
         #num_alts = 4
         self.verbose = True # to show the environment or not
         self.restart_once_done = True  # restart or not once done
-        self.maps = [(70, 50)] #[(70, 50), (400, 35), (86, 266)]
+        self.maps = [(70, 50), (400, 35)] # [(70, 50)] #[(86, 266)]  # For testing
         self.dist_old = 1000
         #self.map_volume = CNP.map_to_volume_dict(map_x, map_y, width, height)
 
@@ -394,7 +394,8 @@ class GridworldEnv(gym.Env):
         self.altitude = 2
         _map = random.choice(self.maps)
         self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
-        hiker = (7,7)#(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2))
+        # Set hiker's and drone's locations
+        hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (7,7)
         drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(2,3)#
         while drone == hiker:
             drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),

@@ -9,6 +9,7 @@ from common.util import calculate_n_step_reward, general_n_step_advantage, combi
     dict_of_lists_to_list_of_dicst
 import tensorflow as tf
 from absl import flags
+from time import sleep
 
 PPORunParams = namedtuple("PPORunParams", ["lambda_par", "batch_size", "n_epochs"])
 
@@ -97,7 +98,7 @@ class Runner(object):
             obs_raw = self.envs.step(action_ids)
             #obs_raw.reward = reward
             latest_obs = self.obs_processer.process(obs_raw[0]) # For obs_raw as tuple! #(MINE) =state(t+1). Processes all inputs/obs from all timesteps (and envs)
-            print('|rewards:', np.round(np.mean(obs_raw[1]), 3))
+            print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
             mb_rewards[:, n] = [t for t in obs_raw[1]]
             mb_done[:, n] = [t for t in obs_raw[2]]
 
@@ -152,12 +153,13 @@ class Runner(object):
         sys.stdout.flush()
 
     def run_trained_batch(self):
+        sleep(0.1)
         # state = state(0), initialized by the env.reset() in run_agent
         latest_obs = self.latest_obs # (MINE) =state(t)
         # action = agent(state)
         action_ids, value_estimate = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
         print('|actions:', action_ids)
-        obs_raw = self.envs.step(action_ids) # (MINE) ENVS STEP = THE ACTUAL ENVIRONMENTAL STEP
+        obs_raw = self.envs.step(action_ids) # It will also visualize the next observation if all the episodes have ended as after success it retunrs the obs from reset
         latest_obs = self.obs_processer.process(obs_raw[0])  # (MINE) =process(state(t+1)). Processes all inputs/obs from all timesteps
         print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
 

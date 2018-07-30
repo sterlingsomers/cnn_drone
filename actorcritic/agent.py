@@ -226,7 +226,7 @@ class ActorCriticAgent:
         self.saver = tf.train.Saver(max_to_keep=2)
         self.all_summary_op = tf.summary.merge_all(tf.GraphKeys.SUMMARIES)
         self.scalar_summary_op = tf.summary.merge(tf.get_collection(self._scalar_summary_key))
-        self.beholder = beholder_lib.Beholder(logdir=LOG_DIRECTORY)
+        #self.beholder = beholder_lib.Beholder(logdir=LOG_DIRECTORY)
         #tf.summary.image('spatial policy', tf.reshape(self.theta.spatial_action_logits, [-1, 32, 32, 1]))
 
     def _input_to_feed_dict(self, input_dict):
@@ -245,17 +245,19 @@ class ActorCriticAgent:
         #     np.unravel_index(spatial_action, (self.spatial_dim,) * 2)
         # ).transpose()
 
+        ##### BEHOLDER
         #activations= [np.reshape(images[0], (32, 32, 32)), np.reshape(images[1], (32, 32, 32)), np.reshape(images[2], (32, 32))]
         # spatial_policy_im = np.reshape(images[1], (32, 32))
-        image = np.reshape(convs_im[0], (13,13,64))
+        #image = np.reshape(convs_im[0], (13,13,64)) # DRONE
         # # Create 3 channel-image
         # spatial_policy_im = np.stack((spatial_policy_im)*3, -1).transpose()
         #activations= [images[0], images[1]]#, spatial_policy_im]
-        self.beholder.update(
-            session=self.sess,
-            arrays=image,#activations,# + [first_of_batch] + gradient_arrays
-            frame=image,
-        )
+        # self.beholder.update(
+        #     session=self.sess,
+        #     arrays=image,#activations,# + [first_of_batch] + gradient_arrays
+        #     frame=image,
+        # )
+        ########
         #self.summary_writer.add_summary(images[2]) # seems not working cauz of merging all
 
         return action_id, value_estimate
