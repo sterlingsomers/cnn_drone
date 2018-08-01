@@ -39,9 +39,9 @@ class GridworldEnv(gym.Env):
         # # TODO: Pass the environment with arguments
 
         #num_alts = 4
-        self.verbose = True # to show the environment or not
+        self.verbose = False # to show the environment or not
         self.restart_once_done = True  # restart or not once done
-        self.maps = [(70, 50), (400, 35)] # [(70, 50)] #[(86, 266)]  # For testing
+        self.maps = [(70, 50)]#, (400, 35)] # [(70, 50)] #[(86, 266)]  # For testing
         self.dist_old = 1000
         #self.map_volume = CNP.map_to_volume_dict(map_x, map_y, width, height)
 
@@ -395,8 +395,8 @@ class GridworldEnv(gym.Env):
         _map = random.choice(self.maps)
         self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
         # Set hiker's and drone's locations
-        hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (7,7)
-        drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(2,3)#
+        hiker = (7,7)#(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #
+        drone = (2,3)#(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #
         while drone == hiker:
             drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),
                      random.randint(2, self.map_volume['vol'].shape[1] - 2))
@@ -427,41 +427,6 @@ class GridworldEnv(gym.Env):
         observation = self.generate_observation()
         self.render()
         return observation
-
-    # def _reset(self):
-    #     self.agent_state = copy.deepcopy(self.agent_start_state)
-    #     self.current_grid_map = copy.deepcopy(self.start_grid_map)
-    #     self.observation = self._gridmap_to_observation(self.start_grid_map)
-    #     self._render()
-    #     return self.observation
-
-    def __reset(self):
-        print('XXXXXX RESET XXXXXX')
-        local_x = random.randint(3, 17)
-        local_y = random.randint(3, 17)
-        altitude = random.randint(2, 3)
-        heading = random.randint(1, 8)
-        hiker_x = 5
-        hiker_y = 5
-        while 1:
-            hiker_x = random.randint(3, 17)
-            hiker_y = random.randint(3, 17)
-            if (hiker_x, hiker_y) == (local_x, local_y):
-                continue
-            break
-
-        heading = 1
-        self.agent_state = copy.deepcopy(self.agent_start_state)
-        self.current_grid_map = copy.deepcopy(self.start_grid_map)
-        self.observation = copy.deepcopy(self.map_volume)
-        self.observation[altitude]['drone'][local_y, local_x] = 1.0
-        self.altitude = altitude
-        self.heading = heading
-        # put the hiker in
-        self.observation[0]['hiker'][hiker_y, hiker_x] = 1.0
-        # self.observation = self.start_grid_map#self._gridmap_to_observation(self.start_grid_map) # The map contains the obs, here is the starting map
-        self._render()
-        return self.observation
 
     def _read_grid_map(self, grid_map_path):
         grid_map = open(grid_map_path, 'r').readlines()

@@ -37,7 +37,7 @@ class FullyConvPolicy:
             data_format="NHWC",
             num_outputs=64,
             kernel_size=4,
-            stride=1,
+            stride=1,#2,#
             padding='SAME',
             activation_fn=tf.nn.relu,
             scope="%s/conv2" % name,
@@ -47,7 +47,7 @@ class FullyConvPolicy:
         #     inputs=conv2,
         #     data_format="NHWC",
         #     num_outputs=64,
-        #     kernel_size=4,
+        #     kernel_size=3,
         #     stride=1,
         #     padding='SAME',
         #     activation_fn=tf.nn.relu,
@@ -61,6 +61,7 @@ class FullyConvPolicy:
             # layers.summarize_activation(conv3)
 
         return conv2
+        # return conv3
 
     def build(self):
         # units_embedded = layers.embed_sequence(
