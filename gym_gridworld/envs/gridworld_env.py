@@ -50,10 +50,11 @@ class GridworldEnv(gym.Env):
         # self.local_coordinates = [local_x,local_y]
         # self.world_coordinates = [70,50]
         #self.reference_coordinates = [70, 50]
-        self.actions = list(range(15))
+
         # self.heading = heading
         # self.altitude = altitude
         self.action_space = spaces.Discrete(15)
+        self.actions = list(range(self.action_space.n))
         self.obs_shape = [50,50,3]
         self.observation_space = spaces.Box(low=0, high=255, shape=self.obs_shape)
         self.real_actions = False
@@ -406,9 +407,8 @@ class GridworldEnv(gym.Env):
         # self.local_coordinates = [local_x,local_y]
         # self.world_coordinates = [70,50]
         self.reference_coordinates = [_map[0], _map[1]]
-        self.actions = list(range(15))
 
-        self.action_space = spaces.Discrete(15)
+
         self.real_actions = False
         # put the drone in
         self.map_volume['vol'][self.altitude][drone[0], drone[1]] = \
