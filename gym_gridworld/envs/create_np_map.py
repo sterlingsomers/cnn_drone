@@ -51,15 +51,18 @@ def convert_map_to_volume_dict(x,y,map,width,height):
     #              4:[0,102,51],5:[135,135,0],6:[202,202,0],
     #              7:[255,255,0], 8:[255,180,0], 9:[200,5,0],50:[255,0,0]}
     color_map = {'pine tree':[0,100,14],'pine trees':[0,172,23],'grass':[121,151,0],
-                 'bush':[121,151,0],'bushes':[164,203,8],'trail':[145,116,0],
+                 'bush':[95,98,57],'bushes':[164,203,8],'trail':[145,116,0],
                  'water':[0,34,255],
-                 'drone':{0:[102,0,102],1:[255,0,255],2:[102,0,51],3:[255,0,127],4:[255,0,0]},
+                 'drone':{0:[102,0,51],1:[153,0,153],2:[255,51,255],3:[255,153,255],4:[255,0,0]},
                  'hiker':[255,0,0]}
     #load value maps: feature -> value and value -> feature
     #feature_value_map = {} #{[alt,feature]:value}
     #value_feature_map = {} #{value:(alt,feature)}
     feature_value_map,value_feature_map = get_feature_value_maps(x,y,map)
-    value = 1.0
+    if list(value_feature_map.keys()):
+        value = max(list(value_feature_map.keys())) + 1
+    else:
+        value = 1.0
     for xy, feat in map.items():
         if feat[1] not in list(feature_value_map.keys()):
             #feature_value_map[feat[1]] = {}
@@ -83,7 +86,7 @@ def convert_map_to_volume_dict(x,y,map,width,height):
     return_dict['value_feature_map'] = value_feature_map
     #save before returning
     #todo fix value_feature_map and feature_maps -> they should be the same (except inside out)
-    #print("saving value/feature maps")
+    # print("saving value/feature maps")
     # with open(path+'features/features_to_values.dict', 'wb') as handle:
     #     pickle.dump(feature_value_map, handle)
     # with open(path+'features/values_to_features.dict', 'wb') as handle:
@@ -101,7 +104,7 @@ def convert_map_to_volume_dict(x,y,map,width,height):
     value = max(list(value_feature_map.keys())) + 1
     for i in range(5):
         feature_value_map['drone'][i] = {'val': value, 'color': color_map['drone'][i]}
-        value_feature_map[value] = {'feature': 'drone'}
+        value_feature_map[value] = {'feature': 'drone', 'alt':i, 'color':color_map['drone'][i]}
         value += 1
 
 
@@ -178,6 +181,6 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
 
 
 #sample code
-#a = map_to_volume_dict(70,50,20,20)
-# f,v = get_feature_value_maps(300,200,a) #300,200
-#print('complete.')
+a = map_to_volume_dict(70,50,10,10)
+f,v = get_feature_value_maps(300,200,a) #300,200
+print('complete.')
