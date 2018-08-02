@@ -120,7 +120,9 @@ class FullyConvPolicy:
         # self.screen_output = self._build_convs(screen_numeric_all, "screen_network")
         # self.minimap_output = self._build_convs(minimap_numeric_all, "minimap_network")
         screen_px = tf.cast(self.placeholders.rgb_screen, tf.float32) / 255. # rgb_screen are integers (0-255) and here we convert to float and normalize
+        alt_px = tf.cast(self.placeholders.alt_view, tf.float32) / 255.
         self.screen_output = self._build_convs(screen_px, "screen_network")
+        self.alt_output = self._build_convs(alt_px, "alt_network")
         #minimap_px = tf.cast(self.placeholders.rgb_screen, tf.float32) / 255.
         # self.alt0_output = self._build_convs(alt0_all, "alt0_network")
         # self.alt1_output = self._build_convs(alt1_all, "alt1_network")
@@ -135,7 +137,10 @@ class FullyConvPolicy:
         # State representation (last layer before separation as described in the paper)
         #self.map_output = tf.concat([self.alt0_output, self.alt1_output, self.alt2_output, self.alt3_output], axis=2)
         #self.map_output = tf.concat([self.alt0_output, self.alt1_output], axis=2)
-        self.map_output = self.screen_output
+        
+        self.map_output = tf.concat([self.screen_output, self.alt_output], axis=2)
+
+        #self.map_output = self.screen_output
         # The output layer (conv) of the spatial action policy with one ouput. So this means that there is a 1-1 mapping
         # (no filter that convolvues here) between layer and output. So eventually for every position of the layer you get
         # one value. Then you flatten it and you pass it into a softmax to get probs.

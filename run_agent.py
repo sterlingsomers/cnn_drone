@@ -40,7 +40,7 @@ flags.DEFINE_integer("all_summary_freq", 50, "Record all summaries every n batch
 flags.DEFINE_integer("scalar_summary_freq", 5, "Record scalar summaries every n batch")
 flags.DEFINE_string("checkpoint_path", "_files/models", "Path for agent checkpoints")
 flags.DEFINE_string("summary_path", "_files/summaries", "Path for tensorboard summaries")
-flags.DEFINE_string("model_name", "Test", "Name for checkpoints and tensorboard summaries")
+flags.DEFINE_string("model_name", "Drop", "Name for checkpoints and tensorboard summaries")
 flags.DEFINE_integer("K_batches", 8000,
     "Number of training batches to run in thousands, use -1 to run forever") #(MINE) not for now
 flags.DEFINE_string("map_name", "DefeatRoaches", "Name of a map to use.")
@@ -223,7 +223,7 @@ def main():
         ppo_par=ppo_par
     )
 
-    runner.reset() # Reset env which means you get first observation. You need reset if you run episodic tasks!!! SC2 is not episodic task!!!
+    # runner.reset() # Reset env which means you get first observation. You need reset if you run episodic tasks!!! SC2 is not episodic task!!!
 
     if FLAGS.K_batches >= 0:
         n_batches = FLAGS.K_batches  # (MINE) commented here so no need for thousands * 1000
@@ -235,6 +235,7 @@ def main():
         i = 0
 
         try:
+            runner.reset()
             while True:
                 #runner.reset()
                 if i % 500 == 0:
@@ -250,7 +251,7 @@ def main():
             pass
     else: # Test the agent
         try:
-            #runner.reset()
+            runner.reset_demo()
             while runner.episode_counter <= (FLAGS.episodes - 1):
                 #runner.reset()
                 # You need the -1 as counting starts from zero so for counter 3 you do 4 episodes

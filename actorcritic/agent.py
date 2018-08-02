@@ -34,6 +34,7 @@ def _get_placeholders(spatial_dim):
         (FEATURE_KEYS.selected_action_id, tf.int32, [None]),
         (FEATURE_KEYS.value_target, tf.float32, [None]),
         (FEATURE_KEYS.rgb_screen, tf.float32, [None, 50, 50, 3]),
+        (FEATURE_KEYS.alt_view, tf.float32, [None, 50, 50, 3]),
         (FEATURE_KEYS.player_relative_screen, tf.int32, [None, sd, sd]),
         (FEATURE_KEYS.player_relative_minimap, tf.int32, [None, sd, sd]),
         (FEATURE_KEYS.advantage, tf.float32, [None]),
@@ -197,7 +198,7 @@ class ActorCriticAgent:
             loss=loss,
             global_step=tf.train.get_global_step(),
             optimizer=self.optimiser,
-            clip_gradients=self.max_gradient_norm,
+            clip_gradients=self.max_gradient_norm, # Caps the gradients at the value self.max_gradient_norm
             summaries=OPTIMIZER_SUMMARIES,
             learning_rate=None,
             name="train_op"
@@ -265,8 +266,12 @@ class ActorCriticAgent:
     def step_eval(self, obs):
         # (MINE) Pass the observations through the net
         ob = np.zeros((1, 50, 50, 3))
+        obsb =np.zeros((1, 50, 50, 3))
         ob[0] = obs['rgb_screen']
-        feed_dict = {'rgb_screen:0' : ob}
+        obsb[0] = obs['alt_view']
+
+        feed_dict = {'rgb_screen:0' : ob,
+                     'alt_view:0': obsb}
 
         action_id, value_estimate = self.sess.run(
             [self.sampled_action_id, self.value_estimate],

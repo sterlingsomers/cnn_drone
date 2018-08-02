@@ -50,6 +50,11 @@ class Runner(object):
         obs = self.envs.reset()
         self.latest_obs = self.obs_processer.process(obs)
 
+    def reset_demo(self):
+        #self.score = 0.0
+        obs = self.envs.reset()
+        self.latest_obs = self.obs_processer.process([obs])
+
     def _log_score_to_tb(self, score):
         summary = tf.Summary()
         summary.value.add(tag='sc2/episode_score', simple_value=score)
@@ -153,14 +158,14 @@ class Runner(object):
         sys.stdout.flush()
 
     def run_trained_batch(self):
-        sleep(0.1)
+        sleep(2.0)
         # state = state(0), initialized by the env.reset() in run_agent
         latest_obs = self.latest_obs # (MINE) =state(t)
         # action = agent(state)
         action_ids, value_estimate = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
         print('|actions:', action_ids)
         obs_raw = self.envs.step(action_ids) # It will also visualize the next observation if all the episodes have ended as after success it retunrs the obs from reset
-        latest_obs = self.obs_processer.process(obs_raw[0])  # (MINE) =process(state(t+1)). Processes all inputs/obs from all timesteps
+        latest_obs = self.obs_processer.process(obs_raw[0:-3])  # (MINE) =process(state(t+1)). Processes all inputs/obs from all timesteps
         print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
 
 
