@@ -63,7 +63,8 @@ class Runner(object):
     def _handle_episode_end(self, timestep):
         #(MINE) This timestep is actually the last set of feature observations
         #score = timestep.observation["score_cumulative"][0]
-        self.score = (self.score + timestep) # //self.episode_counter # It is zero at the beginning so you get inf
+        #self.score = (self.score + timestep) # //self.episode_counter # It is zero at the beginning so you get inf
+        self.score = timestep
         print(">>>>>>>>>>>>>>>>>>>>>>>>>>>episode %d ended. Score %f" % (self.episode_counter, self.score))
         self._log_score_to_tb(self.score)
         self.episode_counter += 1

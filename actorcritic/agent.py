@@ -175,18 +175,17 @@ class ActorCriticAgent:
         # neg_entropy_spatial = tf.reduce_sum(
         #     self.theta.spatial_action_probs * self.theta.spatial_action_log_probs
         # ) / sum_spatial_action_available
-        neg_entropy_action_id = tf.reduce_mean(tf.reduce_sum(
-            self.theta.action_id_probs * self.theta.action_id_log_probs, axis=1
-        ))
-
+        neg_entropy_action_id = tf.reduce_mean(tf.reduce_sum(self.theta.action_id_probs * self.theta.action_id_log_probs, axis=1))
+        # neg_entropy_action_id = tf.reduce_sum(self.theta.action_id_probs * self.theta.action_id_log_probs, axis=1)
         # (MINE) Sample now actions from the corresponding dstrs defined by the policy network theta
         self.sampled_action_id = weighted_random_sample(self.theta.action_id_probs)
         # self.sampled_spatial_action = weighted_random_sample(self.theta.spatial_action_probs)
         self.value_estimate = self.theta.value_estimate
         policy_loss = -tf.reduce_mean(selected_log_probs.total * self.placeholders.advantage)
+        #policy_loss = -tf.reduce_sum(selected_log_probs.total * self.placeholders.advantage)
 
-        value_loss = tf.losses.mean_squared_error(
-            self.placeholders.value_target, self.theta.value_estimate) # Target comes from runner/run_batch when you specify the full input
+        value_loss = tf.losses.mean_squared_error(self.placeholders.value_target, self.theta.value_estimate) # Target comes from runner/run_batch when you specify the full input
+        # value_loss = tf.reduce_sum(tf.square(tf.reshape(self.placeholders.value_target,[-1]) - tf.reshape(self.value_estimate, [-1])))
 
         loss = (
             policy_loss
