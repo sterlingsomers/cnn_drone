@@ -1,6 +1,7 @@
 from collections import namedtuple
 from pysc2.lib import actions
 
+import pygame
 import numpy as np
 import sys
 from actorcritic.agent import ActorCriticAgent, ACMode
@@ -159,17 +160,28 @@ class Runner(object):
         sys.stdout.flush()
 
     def run_trained_batch(self):
-        sleep(2.0)
-        # state = state(0), initialized by the env.reset() in run_agent
+        #gameDisplay.fill((1, 50, 130))
+        # STATE, ACTION, REWARD, NEXT STATE
+        # YOU NEED TO DISPLAY FIRST IMAGE HERE AS YOU HAVE RESETED AND THERE ARE OBS THERE AS WELL (YOUR FIRST ONES!)
+        #sleep(2.0)
         latest_obs = self.latest_obs # (MINE) =state(t)
+
         # action = agent(state)
-        action_ids, value_estimate = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
+        action_ids, value_estimate, representation = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
         print('|actions:', action_ids)
         obs_raw = self.envs.step(action_ids) # It will also visualize the next observation if all the episodes have ended as after success it retunrs the obs from reset
-        latest_obs = self.obs_processer.process(obs_raw[0:-3])  # (MINE) =process(state(t+1)). Processes all inputs/obs from all timesteps
+        latest_obs = self.obs_processer.process(obs_raw[0:-3])  # Take only the first element which is the rgb image and ignore the reward, done etc
         print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
 
-
+        # Prepare images
+        map_xy = self.envs.map_image
+        map_alt = self.envs.alt_view
+        map_xy = map_xy.transpose(1,0,2) # swap the axes else the image will come not the same as the matplotlib one
+        map_alt = map_alt.transpose(1,0,2)
+        surf = pygame.surfarray.make_surface(map_xy)
+        surf2 = pygame.surfarray.make_surface(map_alt)
+        surf = pygame.transform.scale(surf, (300, 300))
+        surf2 = pygame.transform.scale(surf2, (300, 300))
 
         if obs_raw[2]:
             # for r in obs_raw[1]: # You will double count here as t
@@ -184,3 +196,4 @@ class Runner(object):
         self.batch_counter += 1
         #print('Batch %d finished' % self.batch_counter)
         sys.stdout.flush()
+        return surf, surf2, action_ids[0], value_estimate[0], obs_raw[1]

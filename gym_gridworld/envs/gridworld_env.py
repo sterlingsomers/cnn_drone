@@ -9,10 +9,9 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
 from PIL import Image as Image
-import matplotlib
-
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('TkAgg')
+# import matplotlib.pyplot as plt
 import threading
 import random
 import pygame
@@ -40,10 +39,10 @@ class GridworldEnv(gym.Env):
         # # TODO: Pass the environment with arguments
 
         #num_alts = 4
-        self.verbose = False # to show the environment or not
+        self.verbose = True # to show the environment or not
         self.restart_once_done = True  # restart or not once done
         self.drop = False
-        self.maps = [(400, 35)]#, (400, 35)] # [(70, 50)] #[(86, 266)]  # For testing
+        self.maps = [(86, 266), (400, 35)] # [(70, 50)] #[(86, 266)]  # For testing, 70,50 there is no where to drop in the whole map
         self.dist_old = 1000
         #self.map_volume = CNP.map_to_volume_dict(map_x, map_y, width, height)
         self.drop_package_grid_size_by_alt = {1: 3, 2: 5, 3: 7}
@@ -251,6 +250,7 @@ class GridworldEnv(gym.Env):
         left_offset = x - N // 2
         top_offset = y - N // 2
 
+        # These are the 4 corners in real world coords
         left = max(0, x - N // 2)
         right = min(arr.shape[0], x + N // 2)
         top = max(0, y - N // 2)
@@ -261,7 +261,7 @@ class GridworldEnv(gym.Env):
         # newArr = np.zeros(self.original_map_volume['vol'][0].shape)
         # newArr[x-N//2:x+N//2+1,y-N//2:y+N//2+1] = window
         # return newArr
-        return [window, left, top]
+        return [window, left, top, right, bottom]
 
     def position_value(self, terrain, altitude, reward_dict, probability_dict):
         damage_probability = probability_dict['damage_probability'][altitude]
@@ -276,11 +276,11 @@ class GridworldEnv(gym.Env):
         damaged = np.random.random() < damage_probability
         # stuck = np.random.random() < stuck_probability
         # sunk = np.random.random() < sunk_probability
-        package_state = 'DAMAGED' if damaged else 'OK'
+        self.package_state = 'DAMAGED' if damaged else 'OK'
         # package_state += '_STUCK' if stuck else ''
         # package_state += '_SUNK' if sunk else ''
-        print("Package state:", package_state)
-        reward = reward_dict[package_state]
+        print("Package state:", self.package_state)
+        reward = reward_dict[self.package_state]
         return reward
 
     def drop_package(self):
@@ -288,8 +288,10 @@ class GridworldEnv(gym.Env):
         alt = self.altitude
         drone_position = np.where(self.map_volume['vol'] == self.map_volume['feature_value_map']['drone'][self.altitude]['val'])
         region = self.drop_package_grid_size_by_alt[self.altitude]
-        neighbors, left, top = self.neighbors(self.original_map_volume['vol'][0], int(drone_position[1]),
+        neighbors, left, top, right, bottom = self.neighbors(self.original_map_volume['vol'][0], int(drone_position[1]),
                                               int(drone_position[2]), region)
+        w = self.map_volume['vol'][0][left:right, top:bottom]
+        is_hiker_in_neighbors = np.any(w == self.map_volume['feature_value_map']['hiker']['val'])
         # print("neigh:")
         # print(neighbors)
         # x = drone_position[0]
@@ -298,13 +300,14 @@ class GridworldEnv(gym.Env):
         y = np.random.randint(0, neighbors.shape[1])
         #print(x, y)
         # value = [x, y]
-        value = neighbors[x, y] # It returns if what kind of terrain is there
+        value = neighbors[x, y] # It returns what kind of terrain is there in (number)
         pack_world_coords = (x + left, y + top) #(x,y) #
-        terrain = self.original_map_volume['value_feature_map'][value]['feature']
+        terrain = self.original_map_volume['value_feature_map'][value]['feature'] # what kind of terrain is there (string)
         reward = self.position_value(terrain, alt, self.drop_rewards, self.drop_probabilities)
         self.pack_dist = np.linalg.norm(np.array(pack_world_coords) - np.array(self.hiker_position[-2:])) # Check it out if it is correct!!!
         reward -= (1/((self.pack_dist**2)+1e-7))#self.pack_dist * 0.1
-        self.reward = reward
+        #reward = reward*(1/((self.pack_dist**2)+1e-7))
+        self.reward = reward*is_hiker_in_neighbors # YOU CANNOT DO THAT EVEN IF IT WORKS FOR THAT MAP AS IT DOESNT GET PENALTY FOR DAMAGING THE PACK!
         #print(terrain, reward)
 
     def take_action(self, delta_alt=0, delta_x=0, delta_y=0, new_heading=1):
@@ -396,7 +399,8 @@ class GridworldEnv(gym.Env):
         #             return 1
         # return 0
 
-#PREVIOUS WORKING STEP
+    #PREVIOUS WORKING STEP
+
     # def step(self, action):
     #         ''' return next observation, reward, finished, success '''
     #
@@ -448,11 +452,15 @@ class GridworldEnv(gym.Env):
         info['success'] = False
 
         done = False
-        drone = np.where(
+        drone_old = np.where(
             self.map_volume['vol'] == self.map_volume['feature_value_map']['drone'][self.altitude]['val'])
         hiker = self.hiker_position
-        self.dist = np.linalg.norm(np.array(drone[-2:]) - np.array(hiker[-2:])) # we remove height from the equation so we avoid going diagonally down
+        # Do the action (drone is moving)
         x = eval(self.actionvalue_heading_action[action][self.heading])
+        drone = np.where(
+            self.map_volume['vol'] == self.map_volume['feature_value_map']['drone'][self.altitude]['val'])
+        self.dist = np.linalg.norm(np.array(drone[-2:]) - np.array(hiker[-2:])) # we remove height from the equation so we avoid going diagonally down
+
         crash = self.check_for_crash()
         info['success'] = not crash
         self.render()
@@ -477,8 +485,8 @@ class GridworldEnv(gym.Env):
             if self.check_for_hiker():
                 reward = 1 + self.reward + self.alt_rewards[self.altitude]
             else:
-                reward = 1 + self.reward
-            print('SUCCESS!!!')
+                reward = self.reward + self.alt_rewards[self.altitude] # (try to multiply them and see if it makes a difference!!! Here tho u reward for dropping low alt
+            print('DROP!!!', 'self.reward=', self.reward, 'alt_reward=', self.alt_rewards[self.altitude])
             if self.restart_once_done: # HAVE IT ALWAYS TRUE!!!
                 observation = self.reset()
                 return (observation, reward, done, info)
@@ -486,12 +494,12 @@ class GridworldEnv(gym.Env):
         self.dist_old = self.dist
         # HERE YOU SHOULD HAVE THE REWARD IN CASE IT CRASHES AT ALT=0 OR IN GENERAL AFTER ALL CASES HAVE BEEN CHECKED!!!
         if self.check_for_hiker(): # On top of the hiker
-            print("hiker found:", self.check_for_hiker())
+            #print("hiker found:", self.check_for_hiker())
             # reward = (self.alt_rewards[self.altitude]*0.1)*(1/self.dist**2+1e-7) + self.drop*self.reward (and comment out the reward when you drop and terminate episode
-            reward = -0.01 #1 + self.alt_rewards[self.altitude]
+            reward = 0 #1 + self.alt_rewards[self.altitude]
         else:
-            reward = (self.alt_rewards[self.altitude]*0.1)*((1/(self.dist**2)+1e-7)) # -0.01 + # The closer we are to the hiker the more important is to be close to its altitude
-            print("scale:",(1/(self.dist**2+1e-7)), "dist=",self.dist+1e-7, "alt=", self.altitude, "drone:",drone, "hiker:", hiker,"found:", self.check_for_hiker())
+            reward = (self.alt_rewards[self.altitude]*0.1)*((1/((self.dist**2)+1e-7))) # -0.01 + # The closer we are to the hiker the more important is to be close to its altitude
+            #print("scale:",(1/((self.dist**2+1e-7))), "dist=",self.dist+1e-7, "alt=", self.altitude, "drone:",drone, "hiker:", hiker,"found:", self.check_for_hiker())
         return (self.generate_observation(), reward, done, info)
 
     def reset(self):
@@ -503,8 +511,8 @@ class GridworldEnv(gym.Env):
         _map = random.choice(self.maps)
         self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
         # Set hiker's and drone's locations
-        hiker = (6,4)#(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #
-        drone = (2,3)#(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #
+        hiker = (7,8)#(6,4)#(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #
+        drone = (8,8)#(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #
         while drone == hiker:
             drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),
                      random.randint(2, self.map_volume['vol'].shape[1] - 2))
@@ -698,8 +706,8 @@ class GridworldEnv(gym.Env):
         # img = self.observation
         # map = self.original_map_volume['img']
         obs = self.generate_observation()
-        map = obs['img']
-        alt_view = obs['nextstepimage']
+        self.map_image = obs['img']
+        self.alt_view = obs['nextstepimage']
         # fig = plt.figure(self.this_fig_num)
         # img = np.zeros((20,20,3))
         # img[10,10,0] = 200
@@ -709,13 +717,13 @@ class GridworldEnv(gym.Env):
         #fig = plt.figure(0)
         #fig1 = plt.figure(1)
         #plt.clf()
-        plt.subplot(211)
-        plt.imshow(map)
-        plt.subplot(212)
-        plt.imshow(alt_view)
-        #fig.canvas.draw()
-        #plt.show()
-        plt.pause(0.00001)
+        # plt.subplot(211)
+        # plt.imshow(self.map_image)
+        # plt.subplot(212)
+        # plt.imshow(self.alt_view)
+        # #fig.canvas.draw()
+        # #plt.show()
+        # plt.pause(0.00001)
         return
 
     def _close_env(self):

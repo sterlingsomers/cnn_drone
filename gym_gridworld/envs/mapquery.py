@@ -15,7 +15,7 @@ import itertools
 #use a tcp server
 
 
-mavsim_server = ('127.0.0.1', 32786)
+mavsim_server = ('127.0.0.1', 32786)#32786)
 send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 #sent = sock.sendto(b'(\'TELEMETRY\', \'SET_MULTICAST\', \'ON\')', server_address)

@@ -272,12 +272,12 @@ class ActorCriticAgent:
         feed_dict = {'rgb_screen:0' : ob,
                      'alt_view:0': obsb}
 
-        action_id, value_estimate = self.sess.run(
-            [self.sampled_action_id, self.value_estimate],
+        action_id, value_estimate, representation = self.sess.run(
+            [self.sampled_action_id, self.value_estimate, self.theta.map_output],
             feed_dict=feed_dict
         )
 
-        return action_id, value_estimate
+        return action_id, value_estimate, representation
 
     def train(self, input_dict):
         feed_dict = self._input_to_feed_dict(input_dict)
