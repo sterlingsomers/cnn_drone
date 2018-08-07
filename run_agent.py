@@ -311,8 +311,8 @@ def main():
                 # RUN THE MAIN LOOP
                 surf, surf2, action, value, reward = runner.run_trained_batch()
 
-                screen_mssg_variable("Value:", np.round(value,3), (168, 350))
-                screen_mssg_variable("Reward:", np.round(reward,3), (168, 372))
+                screen_mssg_variable("Value    : ", np.round(value,3), (168, 350))
+                screen_mssg_variable("Reward: ", np.round(reward,3), (168, 372))
                 pygame.display.update()
                 pygame.event.get()
                 sleep(1.5)
