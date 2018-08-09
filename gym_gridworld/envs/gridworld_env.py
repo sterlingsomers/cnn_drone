@@ -508,7 +508,7 @@ class GridworldEnv(gym.Env):
         self.dist_old = 1000
         self.drop = False
         self.heading = random.randint(1, 8)
-        self.altitude = 2
+        self.altitude = 3
         self.reward = 0
         _map = random.choice(self.maps)
         self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
