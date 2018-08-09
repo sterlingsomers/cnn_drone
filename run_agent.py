@@ -310,6 +310,7 @@ def main():
                     if event.type == pygame.QUIT:
                         running = False
                 sleep(1.5)
+                # Timestep counter
                 t=0
                 rewards = []
                 done = 0
