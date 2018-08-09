@@ -29,8 +29,8 @@ def get_feature_value_maps(x,y,map):
     feature_value_map = {}
     value_feature_map = {}
     #first check for existing feature maps
-    feature_to_value = Path('features/features_to_values.dict')
-    value_to_feature = Path('features/values_to_features.dict')
+    feature_to_value = Path(path+'features/features_to_values.dict')
+    value_to_feature = Path(path+'features/values_to_features.dict')
 
     if feature_to_value.is_file():
         feature_value_map = pickle.load(open(feature_to_value,'rb'))
@@ -63,7 +63,10 @@ def convert_map_to_volume_dict(x,y,map,width,height):
         value = max(list(value_feature_map.keys())) + 1
     else:
         value = 1.0
+
+
     for xy, feat in map.items():
+        #print(feat[1], feature_value_map.keys())
         if feat[1] not in list(feature_value_map.keys()):
             #feature_value_map[feat[1]] = {}
 
@@ -107,8 +110,6 @@ def convert_map_to_volume_dict(x,y,map,width,height):
         value_feature_map[value] = {'feature': 'drone', 'alt':i, 'color':color_map['drone'][i]}
         value += 1
 
-
-
     #hiker - reserving 50
     value = 50#max(list(value_feature_map.keys())) + 20
 
@@ -116,11 +117,6 @@ def convert_map_to_volume_dict(x,y,map,width,height):
     feature_value_map['hiker']['val'] = value
     feature_value_map['hiker']['color'] = color_map['hiker']
     value_feature_map[value] = {'feature':'hiker', 'alt':0, 'color':color_map['hiker']}
-
-
-
-
-
 
     # for i in range(len(vol)):
     #     key_string = i#'alt{}'.format(i)
@@ -147,9 +143,7 @@ def convert_map_to_volume_dict(x,y,map,width,height):
     #         #return_dict[key_string][feature][non_zero[0][non_zero[1]]] = 1.0
     #         return_dict[key_string][feature][non_zero[0],non_zero[1]] = 1.0
     #         #buil
-
     return return_dict
-
 
 def map_to_volume_dict(x=0,y=0,width=5,height=5):
     #does the map already exist in the maps/ folder?

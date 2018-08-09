@@ -61,14 +61,14 @@ class Runner(object):
         summary.value.add(tag='sc2/episode_score', simple_value=score)
         self.agent.summary_writer.add_summary(summary, self.episode_counter)
 
-    def _handle_episode_end(self, timestep):
+    def _handle_episode_end(self, timestep, length, last_step_r):
         #(MINE) This timestep is actually the last set of feature observations
         #score = timestep.observation["score_cumulative"][0]
         #self.score = (self.score + timestep) # //self.episode_counter # It is zero at the beginning so you get inf
         self.score = timestep
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>episode %d ended. Score %f" % (self.episode_counter, self.score))
-        self._log_score_to_tb(self.score)
-        self.episode_counter += 1
+        print(">>>>>>>>>>>>>>>episode %d ended. Score %f | Total Steps %d | Last step Reward %f" % (self.episode_counter, self.score, length, last_step_r))
+        self._log_score_to_tb(self.score) # logging score to tensorboard
+        self.episode_counter += 1 # Is not used for stopping purposes judt for printing. You train for a number of batches (nsteps+training no matter reset)
         #self.reset() # Error if Monitor doesnt have the option to reset without an env to be done (THIS RESETS ALL ENVS!!! YOU NEED remot.send(env.reset) to reset a specific env. Else restart within the env
 
     def _train_ppo_epoch(self, full_input):
@@ -105,7 +105,7 @@ class Runner(object):
             obs_raw = self.envs.step(action_ids)
             #obs_raw.reward = reward
             latest_obs = self.obs_processer.process(obs_raw[0]) # For obs_raw as tuple! #(MINE) =state(t+1). Processes all inputs/obs from all timesteps (and envs)
-            print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
+            #print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
             mb_rewards[:, n] = [t for t in obs_raw[1]]
             mb_done[:, n] = [t for t in obs_raw[2]]
 
@@ -117,13 +117,16 @@ class Runner(object):
             for t in obs_raw[2]:
                 if t == True: # done=true
                     # Put reward in scores
-                    self._handle_episode_end(obs_raw[1][indx]) # The printing score process is NOT a parallel process apparrently as you input every reward (t) independently
-                indx = indx + 1
+                    epis_reward = obs_raw[3][indx]['episode']['r']
+                    epis_length = obs_raw[3][indx]['episode']['l']
+                    last_step_r = obs_raw[1][indx]
+                    self._handle_episode_end(epis_reward, epis_length, last_step_r) # The printing score process is NOT a parallel process apparrently as you input every reward (t) independently
+                indx = indx + 1 # finished envs count
             # for t in obs_raw:
             #     if t.last():
             #         self._handle_episode_end(t)
 
-        print(">> Avg. Reward:",np.round(np.mean(mb_rewards),3))
+        #print(">> Avg. Reward:",np.round(np.mean(mb_rewards),3))
         mb_values[:, -1] = self.agent.get_value(latest_obs) # We bootstrap from last step if not terminal! although he doesnt use any check here
 
         n_step_advantage = general_n_step_advantage(
@@ -155,7 +158,7 @@ class Runner(object):
             self.agent.update_theta()
 
         self.latest_obs = latest_obs
-        self.batch_counter += 1
+        self.batch_counter += 1 # It is used only for printing reasons as the outer while loop takes care to stop the number of batches
         print('Batch %d finished' % self.batch_counter)
         sys.stdout.flush()
 
@@ -173,27 +176,12 @@ class Runner(object):
         latest_obs = self.obs_processer.process(obs_raw[0:-3])  # Take only the first element which is the rgb image and ignore the reward, done etc
         print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
 
-        # Prepare images
-        map_xy = self.envs.map_image
-        map_alt = self.envs.alt_view
-        map_xy = map_xy.transpose(1,0,2) # swap the axes else the image will come not the same as the matplotlib one
-        map_alt = map_alt.transpose(1,0,2)
-        surf = pygame.surfarray.make_surface(map_xy)
-        surf2 = pygame.surfarray.make_surface(map_alt)
-        surf = pygame.transform.scale(surf, (300, 300))
-        surf2 = pygame.transform.scale(surf2, (300, 300))
-
-        if obs_raw[2]:
-            # for r in obs_raw[1]: # You will double count here as t
-            self._handle_episode_end(obs_raw[1])  # The printing score process is NOT a parallel process apparrently as you input every reward (t) independently
-
-        # Check for all t (timestep/observation in obs_raw which t has the last state true, meaning it is the last state
-        # for t in obs_raw:
-        #     if t.last():
-        #         self._handle_episode_end(t)
+        # if obs_raw[2]: # done is True
+        #     # for r in obs_raw[1]: # You will double count here as t
+        #     self._handle_episode_end(obs_raw[1])  # The printing score process is NOT a parallel process apparrently as you input every reward (t) independently
 
         self.latest_obs = latest_obs # (MINE) state(t) = state(t+1), the usual s=s'
         self.batch_counter += 1
         #print('Batch %d finished' % self.batch_counter)
         sys.stdout.flush()
-        return surf, surf2, action_ids[0], value_estimate[0], obs_raw[1]
+        return obs_raw[0:-3], action_ids[0], value_estimate[0], obs_raw[1], obs_raw[2]
