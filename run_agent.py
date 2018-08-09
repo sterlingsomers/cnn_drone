@@ -310,6 +310,7 @@ def main():
                     if event.type == pygame.QUIT:
                         running = False
                 sleep(1.5)
+                t=0
                 rewards = []
                 done = 0
                 while done==0:
@@ -319,7 +320,7 @@ def main():
                     rewards.append(reward)
                     if done:
                         score = sum(rewards)
-                        print(">>>>>>>>>>>>>>>>>>>>>>>>>>> episode %d ended. Score %f" % (runner.episode_counter, score))
+                        print(">>>>>>>>>>>>>>>>>>>>>>>>>>> episode %d ended in %d steps. Score %f" % (runner.episode_counter, t, score))
                         runner.episode_counter += 1
 
                     screen_mssg_variable("Value    : ", np.round(value,3), (168, 350))
@@ -345,6 +346,7 @@ def main():
                     pygame.display.update() # Updates only the blitted parts of the screen, pygame.display.flip() updates the whole screen
                     pygame.event.get() # Show the last state and then reset
                     sleep(1.2)
+                    t += 1
                 clock.tick(15)
         except KeyboardInterrupt:
             pass
