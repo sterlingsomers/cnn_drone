@@ -141,7 +141,7 @@ class Runner(object):
             # these are transposed because action/obs
             # processers return [time, env, ...] shaped arrays
             FEATURE_KEYS.advantage: n_step_advantage.transpose(),
-            FEATURE_KEYS.value_target: (n_step_advantage + mb_values[:, :-1]).transpose()
+            FEATURE_KEYS.value_target: (n_step_advantage + mb_values[:, :-1]).transpose() # if you add to the advantage the value you get the target for your value function training
         }
         #(MINE) Probably we combine all experiences from every worker below
         full_input.update(self.action_processer.combine_batch(mb_actions))

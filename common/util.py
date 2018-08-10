@@ -7,7 +7,7 @@ def weighted_random_sample(weights):
     :param weights: 2d tensor [n, d] containing positive weights for sampling
     :return: 1d tensor [n] with idx in [0, d) randomly sampled proportional to weights
     """
-    u = tf.random_uniform(tf.shape(weights))
+    u = tf.random_uniform(tf.shape(weights)) # Example if weights (action num) is 4 you sample one number uniformly from 0-3
     return tf.argmax(tf.log(u) / weights, axis=1)
 
 

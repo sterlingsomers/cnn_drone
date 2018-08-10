@@ -178,11 +178,44 @@ class ActorCriticAgent:
         neg_entropy_action_id = tf.reduce_mean(tf.reduce_sum(self.theta.action_id_probs * self.theta.action_id_log_probs, axis=1))
         # neg_entropy_action_id = tf.reduce_sum(self.theta.action_id_probs * self.theta.action_id_log_probs, axis=1)
         # (MINE) Sample now actions from the corresponding dstrs defined by the policy network theta
-        self.sampled_action_id = weighted_random_sample(self.theta.action_id_probs)
-        # self.sampled_spatial_action = weighted_random_sample(self.theta.spatial_action_probs)
-        self.value_estimate = self.theta.value_estimate
-        policy_loss = -tf.reduce_mean(selected_log_probs.total * self.placeholders.advantage)
-        #policy_loss = -tf.reduce_sum(selected_log_probs.total * self.placeholders.advantage)
+        if self.mode == ACMode.PPO:
+            # could also use stop_gradient and forget about the trainable
+            with tf.variable_scope("theta_old"):
+                theta_old = self.policy(self, trainable=False).build()
+
+            new_theta_var = tf.global_variables("theta/")
+            old_theta_var = tf.global_variables("theta_old/")
+
+            assert len(tf.trainable_variables("theta/")) == len(new_theta_var)
+            assert not tf.trainable_variables("theta_old/")
+            assert len(old_theta_var) == len(new_theta_var)
+
+            self.update_theta_op = [
+                tf.assign(t_old, t_new) for t_new, t_old in zip(new_theta_var, old_theta_var)
+            ]
+
+            selected_log_probs_old = self._get_select_action_probs(theta_old)
+            ratio = tf.exp(selected_log_probs.total - selected_log_probs_old.total)
+            clipped_ratio = tf.clip_by_value(
+                ratio, 1.0 - self.clip_epsilon, 1.0 + self.clip_epsilon
+            )
+            l_clip = tf.minimum(
+                ratio * self.placeholders.advantage,
+                clipped_ratio * self.placeholders.advantage
+            )
+            self.sampled_action_id = weighted_random_sample(theta_old.action_id_probs)
+            self.sampled_spatial_action = weighted_random_sample(theta_old.spatial_action_probs)
+            self.value_estimate = theta_old.value_estimate
+            self._scalar_summary("action/ratio", tf.reduce_mean(clipped_ratio))
+            self._scalar_summary("action/ratio_is_clipped",
+                tf.reduce_mean(tf.to_float(tf.equal(ratio, clipped_ratio))))
+            policy_loss = -tf.reduce_mean(l_clip)
+        else:
+            self.sampled_action_id = weighted_random_sample(self.theta.action_id_probs)
+            # self.sampled_spatial_action = weighted_random_sample(self.theta.spatial_action_probs)
+            self.value_estimate = self.theta.value_estimate
+            policy_loss = -tf.reduce_mean(selected_log_probs.total * self.placeholders.advantage)
+            #policy_loss = -tf.reduce_sum(selected_log_probs.total * self.placeholders.advantage)
 
         value_loss = tf.losses.mean_squared_error(self.placeholders.value_target, self.theta.value_estimate) # Target comes from runner/run_batch when you specify the full input
         # value_loss = tf.reduce_sum(tf.square(tf.reshape(self.placeholders.value_target,[-1]) - tf.reshape(self.value_estimate, [-1])))
