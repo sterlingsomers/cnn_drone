@@ -64,7 +64,7 @@ def general_n_step_advantage(
 
     delta_rev = delta[:, ::-1]
     adjustment = (discount * lambda_par) ** np.arange(timesteps, 0, -1)
-    advantage = (np.cumsum(delta_rev * adjustment, axis=1) / adjustment)[:, ::-1]
+    advantage = (np.cumsum(delta_rev * adjustment, axis=1) / adjustment)[:, ::-1] # Why he devides with the adjustment? this will decrease the power of the adjustmennt with the sum by one
     return advantage
 
 
