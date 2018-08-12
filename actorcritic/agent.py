@@ -204,7 +204,7 @@ class ActorCriticAgent:
                 clipped_ratio * self.placeholders.advantage
             )
             self.sampled_action_id = weighted_random_sample(theta_old.action_id_probs)
-            self.sampled_spatial_action = weighted_random_sample(theta_old.spatial_action_probs)
+            #self.sampled_spatial_action = weighted_random_sample(theta_old.spatial_action_probs)
             self.value_estimate = theta_old.value_estimate
             self._scalar_summary("action/ratio", tf.reduce_mean(clipped_ratio))
             self._scalar_summary("action/ratio_is_clipped",

@@ -42,8 +42,10 @@ class Runner(object):
         self.is_ppo = self.agent.mode == ACMode.PPO
         if self.is_ppo:
             assert ppo_par is not None
-            assert n_steps * envs.n_envs % ppo_par.batch_size == 0
-            assert n_steps * envs.n_envs >= ppo_par.batch_size
+            # assert n_steps * envs.n_envs % ppo_par.batch_size == 0
+            # assert n_steps * envs.n_envs >= ppo_par.batch_size
+            assert n_steps * self.envs.num_envs % ppo_par.batch_size == 0
+            assert n_steps * self.envs.num_envs >= ppo_par.batch_size
             self.ppo_par = ppo_par
 
     def reset(self):
@@ -72,7 +74,7 @@ class Runner(object):
         #self.reset() # Error if Monitor doesnt have the option to reset without an env to be done (THIS RESETS ALL ENVS!!! YOU NEED remot.send(env.reset) to reset a specific env. Else restart within the env
 
     def _train_ppo_epoch(self, full_input):
-        total_obs = self.n_steps * self.envs.n_envs
+        total_obs = self.n_steps * self.envs.num_envs
         shuffle_idx = np.random.permutation(total_obs)
         batches = dict_of_lists_to_list_of_dicst({
             k: np.split(v[shuffle_idx], total_obs // self.ppo_par.batch_size)

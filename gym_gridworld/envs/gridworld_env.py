@@ -40,6 +40,7 @@ class GridworldEnv(gym.Env):
 
         #num_alts = 4
         self.verbose = True # to show the environment or not
+        self.dropping = True # This is for the reset to select the proper starting locations for hiker and drone
         self.restart_once_done = True  # restart or not once done
         self.drop = False
         self.maps = [(400,35), (350,90), (430,110),(390,50), (230,70)] #[(86, 266)] (70,50) # For testing, 70,50 there is no where to drop in the whole map
@@ -104,6 +105,19 @@ class GridworldEnv(gym.Env):
             8: [[1, -1], [0, -1], [-1, -1], [-1, 0], [-1, -1]]
 
         }
+
+        # self.possible_actions_map = {
+        #     1: [[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]],
+        #     2: [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1]],
+        #     3: [[-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0]],
+        #     4: [[-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]],
+        #     5: [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1]],
+        #     6: [[1, 1], [1, 0], [1, -1], [0, -1], [-1, -1]],
+        #     7: [[1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0]],
+        #     8: [[1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]]
+        #
+        # }
+
         self.actionvalue_heading_action = {
             0: {1: 'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
                 2: 'self.take_action(delta_alt=-1,delta_x=-1,delta_y=-1,new_heading=8)',
@@ -501,6 +515,7 @@ class GridworldEnv(gym.Env):
             reward = 0 #1 + self.alt_rewards[self.altitude]
         else:
             # We don't want the drone to wonder around away from the hiker so we keep it close
+            # The reward below though with PPO will make the drone just going close and around the hiker forever as it gather reward all the time
             reward = (self.alt_rewards[self.altitude]*0.1)*((1/((self.dist**2)+1e-7))) # -0.01 + # The closer we are to the hiker the more important is to be close to its altitude
             #print("scale:",(1/((self.dist**2+1e-7))), "dist=",self.dist+1e-7, "alt=", self.altitude, "drone:",drone, "hiker:", hiker,"found:", self.check_for_hiker())
         return (self.generate_observation(), reward, done, info)
@@ -509,15 +524,21 @@ class GridworldEnv(gym.Env):
         self.dist_old = 1000
         self.drop = False
         self.heading = random.randint(1, 8)
-        self.altitude = 3
+        self.altitude = 2
         self.reward = 0
         _map = random.choice(self.maps)
         self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
         # Set hiker's and drone's locations
         #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
-        hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
-        drone = random.choice([(hiker[0]-1, hiker[1]-1),(hiker[0]-1, hiker[1]),(hiker[0], hiker[1]-1)])## Package drop starts close to hiker!!! #(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (8,8) #
+        if self.dropping:
+            hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
+            drone = random.choice([(hiker[0]-1, hiker[1]-1),(hiker[0]-1, hiker[1]),(hiker[0], hiker[1]-1)])## Package drop starts close to hiker!!! #(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (8,8) #
+        else:
+            hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
+            drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))
+
         while drone == hiker:
+            print('$$$$$$$$ AWAY !!! $$$$$$$')
             drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),
                      random.randint(2, self.map_volume['vol'].shape[1] - 2))
 
