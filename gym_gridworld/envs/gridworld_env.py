@@ -39,7 +39,7 @@ class GridworldEnv(gym.Env):
         # # TODO: Pass the environment with arguments
 
         #num_alts = 4
-        self.verbose = True # to show the environment or not
+        self.verbose = False # to show the environment or not
         self.dropping = True # This is for the reset to select the proper starting locations for hiker and drone
         self.restart_once_done = True  # restart or not once done
         self.drop = False
@@ -94,29 +94,29 @@ class GridworldEnv(gym.Env):
         self.alt_rewards = {0:-1, 1:1, 2:-0.5, 3:-0.8}
         
 
-        self.possible_actions_map = {
-            1: [[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]],
-            2: [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1]],
-            3: [[-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0]],
-            4: [[-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]],
-            5: [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1]],
-            6: [[1, 1], [1, 0], [1, -1], [0, -1], [-1, -1]],
-            7: [[-1, 0], [-1, -1], [0, -1], [-1, -1], [-1, 0]],
-            8: [[1, -1], [0, -1], [-1, -1], [-1, 0], [-1, -1]]
-
-        }
-
         # self.possible_actions_map = {
         #     1: [[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]],
-        #     2: [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1]],
+        #     2: [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1]],
         #     3: [[-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0]],
         #     4: [[-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]],
         #     5: [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1]],
         #     6: [[1, 1], [1, 0], [1, -1], [0, -1], [-1, -1]],
-        #     7: [[1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0]],
-        #     8: [[1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]]
+        #     7: [[-1, 0], [-1, -1], [0, -1], [-1, -1], [-1, 0]],
+        #     8: [[1, -1], [0, -1], [-1, -1], [-1, 0], [-1, -1]]
         #
         # }
+
+        self.possible_actions_map = {
+            1: [[0, -1], [-1, -1], [-1, 0], [-1, 1], [0, 1]],
+            2: [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1]],
+            3: [[-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0]],
+            4: [[-1, 1], [0, 1], [1, 1], [1, 0], [1, -1]],
+            5: [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1]],
+            6: [[1, 1], [1, 0], [1, -1], [0, -1], [-1, -1]],
+            7: [[1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0]],
+            8: [[1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]]
+
+        }
 
         self.actionvalue_heading_action = {
             0: {1: 'self.take_action(delta_alt=-1,delta_x=-1,delta_y=0,new_heading=7)',
@@ -530,12 +530,12 @@ class GridworldEnv(gym.Env):
         self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
         # Set hiker's and drone's locations
         #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
-        if self.dropping:
-            hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
-            drone = random.choice([(hiker[0]-1, hiker[1]-1),(hiker[0]-1, hiker[1]),(hiker[0], hiker[1]-1)])## Package drop starts close to hiker!!! #(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (8,8) #
-        else:
-            hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
-            drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))
+        #if self.dropping:
+        hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
+        drone = random.choice([(hiker[0]-1, hiker[1]-1),(hiker[0]-1, hiker[1]),(hiker[0], hiker[1]-1)])## Package drop starts close to hiker!!! #(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (8,8) #
+        #else:
+            # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
+            # drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))
 
         while drone == hiker:
             print('$$$$$$$$ AWAY !!! $$$$$$$')
