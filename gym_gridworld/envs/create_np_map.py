@@ -3,7 +3,9 @@ import pickle
 import numpy as np
 from gym_gridworld.envs.mapquery import terrain_request
 from pathlib import Path
-path='./gym_gridworld/'
+
+dirname, filename = os.path.split(os.path.abspath(__file__))
+path=dirname
 # map = pickle.load(open('050070.dict','rb'))
 # top_left = (50,70)
 # #make the volume
@@ -29,13 +31,13 @@ def get_feature_value_maps(x,y,map):
     feature_value_map = {}
     value_feature_map = {}
     #first check for existing feature maps
-    feature_to_value = Path(path+'features/features_to_values.dict')
-    value_to_feature = Path(path+'features/values_to_features.dict')
+    feature_to_value = os.path.join(path,'features','features_to_values.dict')
+    value_to_feature = os.path.join(path,'features','values_to_features.dict')
 
-    if feature_to_value.is_file():
-        feature_value_map = pickle.load(open(feature_to_value,'rb'))
-    if value_to_feature.is_file():
-        value_feature_map = pickle.load(open(value_to_feature, 'rb'))
+    #if feature_to_value.is_file():
+    feature_value_map = pickle.load(open(feature_to_value,'rb'))
+    #if value_to_feature.is_file():
+    value_feature_map = pickle.load(open(value_to_feature, 'rb'))
 
 
     return (feature_value_map, value_feature_map)
@@ -151,21 +153,21 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
     filename = '{}-{}.mp'.format(x,y)
     maps = []
     map = 0
-    for files in os.listdir(path+'maps'):
+    for files in os.listdir(os.path.join(path,'maps')):
         if files.endswith(".mp"):
             maps.append(files)
     #loops through because I'll need the actual map
     for files in maps:
         if filename == files:
             #print("loading existing map.")
-            map = pickle.load(open(path+'maps/' + filename,'rb'))
+            map = pickle.load(open(os.path.join(path,'maps',filename),'rb'))
     if not map:
         print("generating map. YOU NEED MAVSIM RUNNING!!!")
         map = terrain_request(x,y,width,height)
 
         #store it for future use
         print("saving map.")
-        with open(path+'maps/' + filename, 'wb') as handle:
+        with open(os.path.join(path,'maps',filename), 'wb') as handle:
             pickle.dump(map, handle)
     #convert_map_to_volume_dict(x,y,map)
     return convert_map_to_volume_dict(x,y,map,width,height)
