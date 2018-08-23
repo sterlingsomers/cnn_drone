@@ -527,7 +527,11 @@ class GridworldEnv(gym.Env):
         self.altitude = 2
         self.reward = 0
         _map = random.choice(self.maps)
-        self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
+        #self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
+        #Random generated map
+        start = random.choice([2,2,2,2,2,2,2,1,1,1])
+        stop = random.choice([2,2,2,2,2,2,2,2,4,4])
+        self.map_volume = CNP.create_custom_map(np.random.random_integers(start,stop,(10,10)))
         # Set hiker's and drone's locations
         #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
         #if self.dropping:
@@ -553,14 +557,13 @@ class GridworldEnv(gym.Env):
         # put the drone in
         self.map_volume['vol'][self.altitude][drone[0], drone[1]] = \
         self.map_volume['feature_value_map']['drone'][self.altitude]['val']
-        self.map_volume['flat'][drone[0], drone[1]] = self.map_volume['feature_value_map']['drone'][self.altitude][
-            'val']
-        self.map_volume['img'][drone[0], drone[1]] = self.map_volume['feature_value_map']['drone'][self.altitude][
-            'color']
+        #self.map_volume['flat'][drone[0], drone[1]] = self.map_volume['feature_value_map']['drone'][self.altitude][
+        #    'val']
+        self.map_volume['img'][drone[0], drone[1]] = self.map_volume['feature_value_map']['drone'][self.altitude]['color']
         # self.map_volume[altitude]['drone'][local_y, local_x] = 1.0
         # put the hiker in@ altitude 0
         self.map_volume['vol'][0][hiker[0], hiker[1]] = self.map_volume['feature_value_map']['hiker']['val']
-        self.map_volume['flat'][hiker[0], hiker[1]] = self.map_volume['feature_value_map']['hiker']['val']
+        #self.map_volume['flat'][hiker[0], hiker[1]] = self.map_volume['feature_value_map']['hiker']['val']
         self.map_volume['img'][hiker[0], hiker[1]] = self.map_volume['feature_value_map']['hiker']['color']
         self.hiker_position = np.where(self.map_volume['vol'] == self.map_volume['feature_value_map']['hiker']['val'])
 

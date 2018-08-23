@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 from gym_gridworld.envs.mapquery import terrain_request
 from pathlib import Path
+import itertools
 
 dirname, filename = os.path.split(os.path.abspath(__file__))
 path=dirname
@@ -172,7 +173,59 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
     #convert_map_to_volume_dict(x,y,map)
     return convert_map_to_volume_dict(x,y,map,width,height)
 
- #   return return_dict
+def create_custom_map(map):
+    features_to_values, values_to_features = get_feature_value_maps(0, 0, 0)
+    if not features_to_values:
+        return None
+    color_map = {'pine tree': [0, 100, 14], 'pine trees': [0, 172, 23], 'grass': [121, 151, 0],
+                 'bush': [95, 98, 57], 'bushes': [164, 203, 8], 'trail': [145, 116, 0],
+                 'water': [0, 34, 255],
+                 'drone': {0: [102, 0, 51], 1: [153, 0, 153], 2: [255, 51, 255], 3: [255, 153, 255], 4: [255, 0, 0]},
+                 'hiker': [255, 0, 0]}
+    vol = np.zeros((5,map.shape[0],map.shape[1]))
+    # create the img
+    img = np.zeros((map.shape[0], map.shape[1], 3), dtype=np.uint8)
+    for layer_num in range(vol.shape[0]):
+        if layer_num == 0:
+            vol[layer_num] = map
+        else:
+            #combinations = list(itertools.product(range(0, canvas.shape[0]), range(0, canvas.shape[0])))
+            for x,y in list(itertools.product(range(0,vol.shape[1]), range(0,vol.shape[2]))):
+                img[x,y,:] = values_to_features[map[x,y]]['color']
+                if layer_num <= values_to_features[map[x,y]]['alt']:
+                    vol[layer_num,x,y] = map[x,y]
+    layer_num += 1
+
+
+    #add the drone and hiker to dictionaries
+    # add the hiker and the drone
+    features_to_values['hiker'] = {}
+    features_to_values['drone'] = {}
+    # drone
+    # value += 20
+    value = max(list(values_to_features.keys())) + 1
+    for i in range(5):
+        features_to_values['drone'][i] = {'val': value, 'color': color_map['drone'][i]}
+        values_to_features[value] = {'feature': 'drone', 'alt': i, 'color': color_map['drone'][i]}
+        value += 1
+
+    # hiker - reserving 50
+    value = 50  # max(list(value_feature_map.keys())) + 20
+
+    # for i in range(5):
+    features_to_values['hiker']['val'] = value
+    features_to_values['hiker']['color'] = color_map['hiker']
+    values_to_features[value] = {'feature': 'hiker', 'alt': 0, 'color': color_map['hiker']}
+
+    return_dict = {}
+    return_dict['feature_value_map'] = features_to_values
+    return_dict['value_feature_map'] = values_to_features
+    return_dict['vol'] = vol
+    return_dict['img'] = img
+    print("OK")
+    return return_dict
+
+
 
 
 
@@ -180,3 +233,26 @@ def map_to_volume_dict(x=0,y=0,width=5,height=5):
 #a = map_to_volume_dict(90,70,10,10)
 # f,v = get_feature_value_maps(300,200,a) #300,200
 # print('complete.')
+
+#custom map
+# feature_to_values, values_to_features = get_feature_value_maps(0,0,0)
+# #pine tree
+# p = feature_to_values['pine tree']['val']
+# #grass
+# g = feature_to_values['grass']['val']
+# map = [
+#     [p,p,p,p,p,p,p,p,p,p],
+#     [p,p,p,p,p,p,p,p,p,p],
+#     [p,p,p,p,p,p,p,p,p,p],
+#     [p,p,p,p,p,p,p,p,p,p],
+#     [p,p,p,p,p,p,p,p,p,p],
+#     [g,g,g,g,g,g,g,g,g,g],
+#     [g,g,g,g,g,g,g,g,g,g],
+#     [g,g,g,g,g,g,g,g,g,g],
+#     [g,g,g,g,g,g,g,g,g,g],
+#     [g,g,g,g,g,g,g,g,g,g],
+# ]
+# map = np.array(map)
+# create_custom_map(map)
+#
+# print("done.")
