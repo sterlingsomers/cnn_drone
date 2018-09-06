@@ -86,12 +86,12 @@ class GridworldEnv(gym.Env):
         self.drop_rewards = {"OK": 1,#10,
                              # "OK_STUCK": 5,
                              # "OK_SUNK": 5,
-                             "DAMAGED": -1,#-10,
+                             "DAMAGED": 0,#-10,
                              # "DAMAGED_STUCK": -15,
                              # "DAMAGED_SUNK": -15,
                              # "CRASHED": -30
                              }
-        self.alt_rewards = {0:-1, 1:1, 2:-0.5, 3:-0.8}
+        self.alt_rewards = {0:0, 1:1, 2:0.2, 3:0}
         
 
         # self.possible_actions_map = {
@@ -486,7 +486,7 @@ class GridworldEnv(gym.Env):
         # reward = (self.alt_rewards[self.altitude]*0.1)*(1/self.dist**2+1e-7)# + self.drop*self.reward (and comment out the reward when you drop and terminate episode
         #reward = (self.alt_rewards[self.altitude]*0.1)*((1/(self.dist**2)+1e-7)) # -0.01 + # The closer we are to the hiker the more important is to be close to its altitude
         if crash:
-            reward = -1
+            reward = 0
             done = True
             print("CRASH")
             if self.restart_once_done: # HAVE IT ALWAYS TRUE!!! It learned the first time WITHOUT RESETING FROM CRASH
@@ -500,7 +500,7 @@ class GridworldEnv(gym.Env):
             done = True
             #reward = 1 + self.alt_rewards[self.altitude] # THIS WORKS FOR FINDING THE HIKER
             if self.check_for_hiker():
-                reward = 1 + self.reward + self.alt_rewards[self.altitude]
+                reward = 0.25 + self.reward + self.alt_rewards[self.altitude]
             else:
                 reward = self.reward + self.alt_rewards[self.altitude] # (try to multiply them and see if it makes a difference!!! Here tho u reward for dropping low alt
             print('DROP!!!', 'self.reward=', self.reward, 'alt_reward=', self.alt_rewards[self.altitude])
