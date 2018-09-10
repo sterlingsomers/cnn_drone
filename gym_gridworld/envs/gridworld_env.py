@@ -508,16 +508,17 @@ class GridworldEnv(gym.Env):
                 return (observation, reward, done, info)
         # print("state", [ self.observation[self.altitude]['drone'].nonzero()[0][0],self.observation[self.altitude]['drone'].nonzero()[1][0]] )
         self.dist_old = self.dist
+        reward = -0.001
         # HERE YOU SHOULD HAVE THE REWARD IN CASE IT CRASHES AT ALT=0 OR IN GENERAL AFTER ALL CASES HAVE BEEN CHECKED!!!
-        if self.check_for_hiker(): # On top of the hiker
-            #print("hiker found:", self.check_for_hiker())
-            # reward = (self.alt_rewards[self.altitude]*0.1)*(1/self.dist**2+1e-7) + self.drop*self.reward (and comment out the reward when you drop and terminate episode
-            reward = 0 #1 + self.alt_rewards[self.altitude]
-        else:
-            # We don't want the drone to wonder around away from the hiker so we keep it close
-            # The reward below though with PPO will make the drone just going close and around the hiker forever as it gather reward all the time
-            reward = (self.alt_rewards[self.altitude]*0.1)*((1/((self.dist**2)+1e-7))) # -0.01 + # The closer we are to the hiker the more important is to be close to its altitude
-            #print("scale:",(1/((self.dist**2+1e-7))), "dist=",self.dist+1e-7, "alt=", self.altitude, "drone:",drone, "hiker:", hiker,"found:", self.check_for_hiker())
+        # if self.check_for_hiker(): # On top of the hiker
+        #     #print("hiker found:", self.check_for_hiker())
+        #     # reward = (self.alt_rewards[self.altitude]*0.1)*(1/self.dist**2+1e-7) + self.drop*self.reward (and comment out the reward when you drop and terminate episode
+        #     reward = 0.05 #1 + self.alt_rewards[self.altitude]
+        # else:
+        #     # We don't want the drone to wonder around away from the hiker so we keep it close
+        #     # The reward below though with PPO will make the drone just going close and around the hiker forever as it gather reward all the time
+        #     reward = (self.alt_rewards[self.altitude]*0.1)*((1/((self.dist**2)+1e-7))) # -0.01 + # The closer we are to the hiker the more important is to be close to its altitude
+        #     #print("scale:",(1/((self.dist**2+1e-7))), "dist=",self.dist+1e-7, "alt=", self.altitude, "drone:",drone, "hiker:", hiker,"found:", self.check_for_hiker())
         return (self.generate_observation(), reward, done, info)
 
     def reset(self):
@@ -529,8 +530,8 @@ class GridworldEnv(gym.Env):
         _map = random.choice(self.maps)
         #self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
         #Random generated map
-        start = random.choice([2,2,2,2,2,1,1,1,1,1])
-        stop = random.choice([2,2,2,2,2,2,4,4,4,4])
+        start = random.choice([1,1,1,1,1,1,1,1,1,1])
+        stop = random.choice([4,4,4,4,4,4,4,4,4,4])
         self.map_volume = CNP.create_custom_map(np.random.random_integers(start,stop,(10,10)))
         # Set hiker's and drone's locations
         #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
@@ -541,10 +542,10 @@ class GridworldEnv(gym.Env):
             # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
             # drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))
 
-        while drone == hiker:
-            print('$$$$$$$$ AWAY !!! $$$$$$$')
-            drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),
-                     random.randint(2, self.map_volume['vol'].shape[1] - 2))
+        # while drone == hiker:
+        #     print('$$$$$$$$ AWAY !!! $$$$$$$')
+        #     drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),
+        #              random.randint(2, self.map_volume['vol'].shape[1] - 2))
 
         self.original_map_volume = copy.deepcopy(self.map_volume)
 
