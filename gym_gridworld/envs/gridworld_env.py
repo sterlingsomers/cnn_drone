@@ -526,7 +526,7 @@ class GridworldEnv(gym.Env):
                 return (observation, reward, done, info)
         # print("state", [ self.observation[self.altitude]['drone'].nonzero()[0][0],self.observation[self.altitude]['drone'].nonzero()[1][0]] )
         self.dist_old = self.dist
-        reward = -0.001
+        reward = -0.00005
         # HERE YOU SHOULD HAVE THE REWARD IN CASE IT CRASHES AT ALT=0 OR IN GENERAL AFTER ALL CASES HAVE BEEN CHECKED!!!
         # if self.check_for_hiker(): # On top of the hiker
         #     #print("hiker found:", self.check_for_hiker())
@@ -543,18 +543,18 @@ class GridworldEnv(gym.Env):
         self.dist_old = 1000
         self.drop = False
         self.heading = random.randint(1, 8)
-        self.altitude = 2
+        self.altitude = 3
         self.reward = 0
         _map = random.choice(self.maps)
         #self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
         #Random generated map
         start = random.choice([1,1,1,1,1,1,1,1,1,1])
         stop = random.choice([4,4,4,4,4,4,4,4,4,4])
-        self.map_volume = CNP.create_custom_map(random.choice(self.custom_maps))#CNP.create_custom_map(np.random.random_integers(start,stop,(10,10)))
+        self.map_volume = CNP.create_custom_map(np.random.random_integers(start,stop,(10,10)))#CNP.create_custom_map(random.choice(self.custom_maps))
         # Set hiker's and drone's locations
         #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
         #if self.dropping:
-        hiker = random.choice([(4,5),(5,5),(5,4),(4,4)])#(random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
+        hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))#random.choice([(4,5),(5,5),(5,4),(4,4)])  # (7,8) #
         drone = (random.randint(hiker[0]-1,hiker[0]+1),random.randint(hiker[1]-1,hiker[1]+1))#random.choice([(hiker[0]-1, hiker[1]-1),(hiker[0]-1, hiker[1]),(hiker[0], hiker[1]-1)])## Package drop starts close to hiker!!! #(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (8,8) #
         #else:
             # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
