@@ -520,7 +520,7 @@ class GridworldEnv(gym.Env):
             if self.check_for_hiker():
                 reward = 0.25 + self.reward + self.alt_rewards[self.altitude]
             else:
-                reward = self.reward + self.alt_rewards[self.altitude] + (1/ (self.dist * 4)) #scale the inverse by 4, so it's small# (try to multiply them and see if it makes a difference!!! Here tho u reward for dropping low alt
+                reward = self.reward + self.alt_rewards[self.altitude] + (1/ (self.dist * 2)) #scale the inverse by 4, so it's small# (try to multiply them and see if it makes a difference!!! Here tho u reward for dropping low alt
             print('DROP!!!', 'self.reward=', self.reward, 'alt_reward=', self.alt_rewards[self.altitude])
             if self.restart_once_done: # HAVE IT ALWAYS TRUE!!!
                 return (observation, reward, done, info)
