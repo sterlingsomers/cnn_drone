@@ -337,6 +337,7 @@ class GridworldEnv(gym.Env):
         #reward = reward*(1/(self.pack_dist+1e-7))*0.1
         self.reward = reward*is_hiker_in_neighbors # YOU CANNOT DO THAT EVEN IF IT WORKS FOR THAT MAP AS IT DOESNT GET PENALTY FOR DAMAGING THE PACK!
         #print(terrain, reward)
+        x = eval(self.actionvalue_heading_action[7][self.heading])
 
     def take_action(self, delta_alt=0, delta_x=0, delta_y=0, new_heading=1):
         # print("stop")
