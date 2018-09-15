@@ -177,6 +177,8 @@ def create_custom_map(map):
     features_to_values, values_to_features = get_feature_value_maps(0, 0, 0)
     if not features_to_values:
         return None
+
+    #in the color map, the drone is indexed by altitude.
     color_map = {'pine tree': [0, 100, 14], 'pine trees': [0, 172, 23], 'grass': [121, 151, 0],
                  'bush': [95, 98, 57], 'bushes': [164, 203, 8], 'trail': [145, 116, 0],
                  'water': [0, 34, 255],
@@ -226,8 +228,8 @@ def create_custom_map(map):
     return return_dict
 
 
-
-
+def create_feature_value_maps(jsonmap):
+    pass
 
 #sample code
 #a = map_to_volume_dict(90,70,10,10)

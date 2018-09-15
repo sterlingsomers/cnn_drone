@@ -322,6 +322,7 @@ class GridworldEnv(gym.Env):
             local_coordinates[2] == self.map_volume['vol'].shape[1] - 1:
             print("NOACTION")
             self.reward = 0
+            self.drop = True
             return 0
 
 
@@ -534,8 +535,8 @@ class GridworldEnv(gym.Env):
             if self.check_for_hiker():
                 reward = 0.25 + self.reward + self.alt_rewards[self.altitude]
             else:
-                reward = self.reward + self.alt_rewards[self.altitude] + (1/ (self.dist * 2)) #scale the inverse by 4, so it's small# (try to multiply them and see if it makes a difference!!! Here tho u reward for dropping low alt
-            print('DROP!!!', 'self.reward=', self.reward, 'alt_reward=', self.alt_rewards[self.altitude], "distance=", (1/ (self.dist * 2)))
+                reward = self.reward + self.alt_rewards[self.altitude] + (1 / (self.dist * 2)) #scale the inverse by 4, so it's small# (try to multiply them and see if it makes a difference!!! Here tho u reward for dropping low alt
+            print('DROP!!!', 'self.reward=', self.reward, 'alt_reward=', self.alt_rewards[self.altitude], "distance=", (self.dist /15))
             if self.restart_once_done: # HAVE IT ALWAYS TRUE!!!
                 return (observation, reward, done, info)
         # print("state", [ self.observation[self.altitude]['drone'].nonzero()[0][0],self.observation[self.altitude]['drone'].nonzero()[1][0]] )
