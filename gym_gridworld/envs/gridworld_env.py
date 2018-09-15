@@ -312,6 +312,19 @@ class GridworldEnv(gym.Env):
         return reward
 
     def drop_package(self):
+        # cannot drop at edge because next move could leave map
+        local_coordinates = np.where(
+            self.map_volume['vol'] == self.map_volume['feature_value_map']['drone'][self.altitude]['val'])
+
+        if local_coordinates[1] == 0 or \
+            local_coordinates[2] == 0 or \
+            local_coordinates[1] == self.map_volume['vol'].shape[1] - 1 or \
+            local_coordinates[2] == self.map_volume['vol'].shape[1] - 1:
+            print("NOACTION")
+            self.reward = 0
+            return 0
+
+
         self.drop = True
         alt = self.altitude
         drone_position = np.where(self.map_volume['vol'] == self.map_volume['feature_value_map']['drone'][self.altitude]['val'])
