@@ -224,7 +224,7 @@ def create_custom_map(map):
     return_dict['value_feature_map'] = values_to_features
     return_dict['vol'] = vol
     return_dict['img'] = img
-    print("OK")
+    #print("OK")
     return return_dict
 
 
