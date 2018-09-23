@@ -16,6 +16,7 @@ import threading
 import random
 import pygame
 from scipy.misc import imresize
+from scipy.stats import bernoulli as bn
 
 from gym_gridworld.envs import create_np_map as CNP
 
@@ -492,7 +493,7 @@ class GridworldEnv(gym.Env):
             # print("state", [ self.observation[self.altitude]['drone'].nonzero()[0][0],self.observation[self.altitude]['drone'].nonzero()[1][0]] )
             self.dist_old = self.dist
             #reward = (self.alt_rewards[self.altitude] * 0.1) * ( 1/((self.dist** 2) + 1e-7) )  # -0.01 + # previous reward = (self.alt_rewards[self.altitude] * 0.1) * ( 1 / self.dist** 2 + 1e-7 )  # -0.01 + #
-            reward = -0.00001 # If you put -0.1 then it prefers to go down and crash all the time for (n-step=32)!!!
+            reward = -0.002 # If you put -0.1 then it prefers to go down and crash all the time for (n-step=32)!!!
             return (observation, reward, done, info)
 
     # def step(self, action):
@@ -566,8 +567,13 @@ class GridworldEnv(gym.Env):
         #self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
         #Random generated map
         start = random.choice([1,1,1,1,1,1,1,1,1,1])
-        stop = random.choice([2,2,2,2,2,2,2,2,2,2])
-        self.map_volume = CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph))) #CNP.create_custom_map(random.choice(self.custom_maps))
+        stop = random.choice([13,13,13,13,13,13,13,13,13,13])
+        random_integers = np.random.random_integers(start,stop,(20,20))
+        flag = bn.rvs(p=0.90, size=(20,20))
+        #add 10% (1-p) of any value
+        other_features = np.full((20,20),31)
+        random_integers[flag==0] = other_features[flag==0]
+        self.map_volume = CNP.create_custom_map(random_integers)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph))) #CNP.create_custom_map(random.choice(self.custom_maps))
         # Set hiker's and drone's locations
         #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
         #if self.dropping:
