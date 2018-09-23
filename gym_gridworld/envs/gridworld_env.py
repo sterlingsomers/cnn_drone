@@ -569,9 +569,9 @@ class GridworldEnv(gym.Env):
         start = random.choice([1,1,1,1,1,1,1,1,1,1])
         stop = random.choice([13,13,13,13,13,13,13,13,13,13])
         random_integers = np.random.random_integers(start,stop,(20,20))
-        flag = bn.rvs(p=0.90, size=(20,20))
+        flag = bn.rvs(p=0.99, size=(20,20))
         #add 10% (1-p) of any value
-        other_features = np.full((20,20),31)
+        other_features = np.full((20,20),33)
         random_integers[flag==0] = other_features[flag==0]
         self.map_volume = CNP.create_custom_map(random_integers)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph))) #CNP.create_custom_map(random.choice(self.custom_maps))
         # Set hiker's and drone's locations
