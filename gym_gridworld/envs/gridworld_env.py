@@ -619,9 +619,9 @@ class GridworldEnv(gym.Env):
 
 
         # add some water (maybe)
-        if random.randint(0,1):
-            updated_map, no_go_points = self.add_blob(updated_map, 150, 15)
-            all_no_goes.append(no_go_points)
+        #if random.randint(0,1):
+        updated_map, no_go_points = self.add_blob(updated_map, 450, 15)
+        all_no_goes.append(no_go_points)
         # add some mountain ridges
         updated_map, no_go_points = self.add_blob(updated_map, 75, 26)
         all_no_goes.append(no_go_points)
