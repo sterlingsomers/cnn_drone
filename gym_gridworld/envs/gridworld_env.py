@@ -62,7 +62,9 @@ class GridworldEnv(gym.Env):
         self.dropping = True # This is for the reset to select the proper starting locations for hiker and drone
         self.restart_once_done = True  # restart or not once done
         self.drop = False
-        self.maps = [(171,323)]#[(400,35), (350,90), (430,110),(390,50), (230,70)] #[(86, 266)] (70,50) # For testing, 70,50 there is no where to drop in the whole map
+        self.maps = [(265,308),(20,94),(146,456),(149,341),(164,90),(167,174),
+                     (224,153),(241,163),(260,241),(265,311),(291,231),
+                     (308,110),(321,337),(330,352),(334,203),(360,112),(385,291)]#[(400,35), (350,90), (430,110),(390,50), (230,70)] #[(86, 266)] (70,50) # For testing, 70,50 there is no where to drop in the whole map
         self.mapw = 20
         self.maph = 20
         self.dist_old = 1000
@@ -618,14 +620,14 @@ class GridworldEnv(gym.Env):
 
         # add some water (maybe)
         if random.randint(0,1):
-            updated_map, no_go_points = self.add_blob(updated_map, 100, 15)
+            updated_map, no_go_points = self.add_blob(updated_map, 150, 15)
             all_no_goes.append(no_go_points)
         # add some mountain ridges
         updated_map, no_go_points = self.add_blob(updated_map, 75, 26)
         all_no_goes.append(no_go_points)
         # a few small mountain ridges
         for i in range(random.randint(1,5)):
-            updated_map, no_go_points = self.add_blob(updated_map, random.randint(1, 10), 25)
+            updated_map, no_go_points = self.add_blob(updated_map, random.randint(1, 100), 25)
             all_no_goes.append(no_go_points)
         # add some bushes
         # small clusters, 5 times
@@ -642,8 +644,8 @@ class GridworldEnv(gym.Env):
         # Set hiker's and drone's location
         # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
         # (8, 1)  # (6,3)#
-        hiker = (
-        random.randint(3, self.map_volume['vol'].shape[1] - 3), random.randint(3, self.map_volume['vol'].shape[1] - 3))
+        hiker = (random.randint(3, self.map_volume['vol'].shape[1] - 3),
+                 random.randint(3, self.map_volume['vol'].shape[1] - 3))
         while self.hiker_in_no_go_list(hiker, all_no_goes):
             hiker = (random.randint(3, self.map_volume['vol'].shape[1] - 3),
                      random.randint(3, self.map_volume['vol'].shape[1] - 3))
