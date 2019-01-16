@@ -42,12 +42,12 @@ flags.DEFINE_integer("all_summary_freq", 50, "Record all summaries every n batch
 flags.DEFINE_integer("scalar_summary_freq", 5, "Record scalar summaries every n batch")
 flags.DEFINE_string("checkpoint_path", "_files/models", "Path for agent checkpoints")
 flags.DEFINE_string("summary_path", "_files/summaries", "Path for tensorboard summaries")
-flags.DEFINE_string("model_name", "Nav_2020", "Name for checkpoints and tensorboard summaries")
+flags.DEFINE_string("model_name", "Nav_Agent", "Name for checkpoints and tensorboard summaries")
 flags.DEFINE_integer("K_batches", 1000, # Batch is like a training epoch!
     "Number of training batches to run in thousands, use -1 to run forever") #(MINE) not for now
 flags.DEFINE_string("map_name", "DefeatRoaches", "Name of a map to use.")
 flags.DEFINE_float("discount", 0.95, "Reward-discount for the agent")
-flags.DEFINE_boolean("training", True,
+flags.DEFINE_boolean("training", False,
     "if should train the model, if false then save only episode score summaries"
 )
 flags.DEFINE_enum("if_output_exists", "continue", ["fail", "overwrite", "continue"],
@@ -349,6 +349,7 @@ def main():
                     sleep(1.2)
                     t += 1
                 clock.tick(15)
+
         except KeyboardInterrupt:
             pass
 

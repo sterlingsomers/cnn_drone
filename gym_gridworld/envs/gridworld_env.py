@@ -58,7 +58,7 @@ class GridworldEnv(gym.Env):
                             np.rot90(custom_map),
                             np.rot90(np.rot90(custom_map)),
                             np.rot90(np.rot90(np.rot90(custom_map)))]
-        self.verbose = False # to show the environment or not
+        self.verbose = True # to show the environment or not
         self.dropping = True # This is for the reset to select the proper starting locations for hiker and drone
         self.restart_once_done = True  # restart or not once done
         self.drop = False
@@ -588,6 +588,188 @@ class GridworldEnv(gym.Env):
     #     #     #print("scale:",(1/((self.dist**2+1e-7))), "dist=",self.dist+1e-7, "alt=", self.altitude, "drone:",drone, "hiker:", hiker,"found:", self.check_for_hiker())
     #     return (self.generate_observation(), reward, done, info)
 
+    def generate_experiment_map(self,just_grass=[True],vegitation=[True,4],forest=[False,0,[]],river=[False,0],in_canyon=[False],mountain=[False,0,[]],in_clearing=[False]):
+        '''Returns a (map,hiker,drone) tuple.  setup by parameters. Procedurally bound random.
+        Higher-altitude features overwrite lower altitude features. If vegitation and forest are set on the same quadrant, for example,
+        forest can overlay vegitation.
+        forest = [T/F to include, number of squares, specific squares [v,v,v]]
+        ###FOREST
+        ###
+        #forest=[T/F,number of squares,specific squares list]
+        #if true, it will put trees
+        #the number of squares you want to include
+        #a list of squares
+            #empty list means it will choose randomly
+        ###Mountain
+        ###
+        #mountain=[T/F,number of squares,specific squares list]
+        #if true, it will put trees
+        #the number of squares you want to include
+        #a list of squares
+            #empty list means it will choose randomly
+
+
+        assign sqaures using the third parameter'''
+        #First make an all grass map
+        updated_map = np.full((self.mapw,self.maph),2) #2 == grass
+        #A 10x10 is rather constrained because terrain features need to go around the hiker
+
+        #top_left,top_right,bottom_left,bottom_right = np.array_split(updated_map,4)
+        #upper_half = np.hsplit(np.vsplit(updated_map, 2)[0], 2)
+        #lower_half = np.hsplit(np.vsplit(updated_map, 2)[1], 2)
+
+
+        #the following code splits up the map into 16
+        #sections. If you modify the values, you modify the map
+        upper_half, lower_half = np.vsplit(updated_map,2)
+
+        row_A, row_B = np.vsplit(upper_half,2)
+        row_C, row_D = np.vsplit(lower_half,2)
+
+        sq1, sq2, sq3, sq4 = np.hsplit(row_A,4)
+        sq5, sq6, sq7, sq8 = np.hsplit(row_B,4)
+        sq9,sq10,sq11,sq12 = np.hsplit(row_C,4)
+        sq13,sq14,sq15,sq16 = np.hsplit(row_D,4)
+
+        map_squares = [sq1,sq2,sq3,sq4,sq5,sq6,sq7,sq8,sq9,
+                   sq10,sq11,sq12,sq13,sq14,sq15,sq16]
+
+        #random.shuffle(map_squares)
+
+
+        #the following code splits up the map indices.
+        #they are for reference only but is the same idea as above.
+        indexes = list(np.ndindex(updated_map.shape))
+        indices = np.empty(len(indexes),dtype=object)
+        indices[:] = indexes
+        indices = indices.reshape((20,20))
+
+        IND_upper_half, IND_lower_half = np.vsplit(indices,2)
+
+        IND_row_A, IND_row_B = np.vsplit(IND_upper_half,2)
+        IND_row_C, IND_row_D = np.vsplit(IND_lower_half,2)
+
+        SQ1,SQ2,SQ3,SQ4 = np.hsplit(IND_row_A,4)
+        SQ5,SQ6,SQ7,SQ8 = np.hsplit(IND_row_B,4)
+        SQ9,SQ10,SQ11,SQ12 = np.hsplit(IND_row_C,4)
+        SQ13,SQ14,SQ15,SQ16 = np.hsplit(IND_row_D,4)
+
+        IND_map_squares = [SQ1,SQ2,SQ3,SQ4,SQ5,SQ6,SQ7,SQ8,
+                           SQ9,SQ10,SQ11,SQ12,SQ13,SQ14,SQ15,SQ16]
+
+        #the indices should line up with the values in map_squares
+
+
+        #some directions for features to go in
+        clearing_directions = [(1,0),(0,1),(1,1),(1,-1)]
+            #[up/down, left/right, down&right, up&right]
+
+        # a symbolic terrain dictionary
+        #used potentially for ACT-R
+        #indicates what the main terrain feature in an sq is
+        symbolic_terrain_dict = {}
+
+
+        if just_grass[0]:
+            hiker = (random.randint(3, self.mapw - 3),
+                     random.randint(3, self.maph - 3))
+            drone = (random.randint(3, self.mapw - 3),
+                     random.randint(3, self.maph - 3))
+            while drone == hiker:
+                drone = (random.randint(3, self.mapw - 3),
+                         random.randint(3, self.maph - 3))
+
+            return updated_map, hiker, drone
+
+        if forest[0]:
+            #generate a forest in each quandrant (argument 2)
+            #to qualify as a forest, a 5x5 needs to be occupied by 18-25 trees (this is arbitrary)
+
+            #Random Forests
+            if forest[1]:
+            # for: The number of quandrants to add trees to
+                for i in range(forest[1]):
+                    #get the indices of the quadrants
+                    indices = list(np.ndindex(map_squares[i].shape))
+                    sq = map_squares.pop()
+                    #shuffle those
+                    np.random.shuffle(indices)
+                    for t in range(random.choice(range(24,25))):
+                        #should be MINIMUM 20... but...
+                        #turn 20 of those points into trees
+                        #quad = map_squares.pop()
+                        sq[indices[t][0],indices[t][1]] = 3
+            else:
+                #you can select which squares to put random forrests
+                for sq in forest[2]:
+                    #each sq is a v. you subtract 1 for indexing
+                    sq = sq - 1
+                    indices = list(np.ndindex(map_squares[sq].shape))
+                    np.random.shuffle(indices)
+                    for t in range(random.choice(range(24,25))):
+                        map_squares[sq][indices[t][0],indices[t][1]] = 3
+
+            hiker = (random.randint(3, self.mapw - 3),
+                     random.randint(3, self.maph - 3))
+            drone = (random.randint(3, self.mapw - 3),
+                     random.randint(3, self.maph - 3))
+            while drone == hiker:
+                drone = (random.randint(3, self.mapw - 3),
+                         random.randint(3, self.maph - 3))
+
+            #return updated_map, hiker, drone
+
+        if mountain[0]:
+            #generate some mountains.
+            #for now, they are obstacles, we can do something more intelligent later.
+            if mountain[2]:
+                #list of spots where to put mountain
+
+
+        if in_canyon[0]:
+            #the hiker should be in a cayon.
+            #a single sq (5x5) can be used for that
+            sq = random.choice(map_squares)
+            direction = random.choice([(0,1),(0,-1),(1,0),(-1,0)])
+
+
+        if in_clearing[0]:
+            #assumes a set of forested squares already exists
+            #for now, use forest[2]
+            sq = random.choice(forest[2])
+            sq = sq - 1
+            hiker_square= IND_map_squares[sq]
+            #hiker_square is set of indices to put the hiker in (containing forest)
+            hiker_location = hiker_square[(random.randint(0,4),random.randint(0,4))]
+            while hiker_location[0] <= 1 or hiker_location[0] >=18 or hiker_location[1] <= 1 or hiker_location[1] >= 18:
+                sq = random.choice(forest[2])
+                sq = sq - 1
+                hiker_square = IND_map_squares[sq]
+                # hiker_square is set of indices to put the hiker in (containing forest)
+                hiker_location = hiker_square[(random.randint(0, 4), random.randint(0, 4))]
+
+            #now, there should be grass around the hiker to be a clearing
+            #at the hiker location, and two points in any direction
+
+            updated_map[hiker_location] = 2
+            direction = random.choice(clearing_directions)
+            updated_map[hiker_location[0]+direction[0],hiker_location[1]+direction[1]] = 2
+            updated_map[hiker_location[0] - direction[0], hiker_location[1] - direction[1]] = 2
+            drone = (random.randint(3, self.mapw - 3),
+                     random.randint(3, self.maph - 3))
+            while drone == hiker_location:
+                drone = (random.randint(3, self.mapw - 3),
+                         random.randint(3, self.maph - 3))
+            #place the hiker anywhere in that sq
+            print("test")
+        return updated_map, hiker_location, drone, symbolic_terrain_dict
+
+
+
+
+
+
+
     def reset(self):
         self.dist_old = 1000
         self.drop = False
@@ -595,75 +777,80 @@ class GridworldEnv(gym.Env):
         self.altitude = random.randint(1,3)
         self.reward = 0
         _map = random.choice(self.maps)
-        #self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
-        #Random generated map
-        # start = random.choice([1,1,1,1,1,1,1,1,1,1])
-        # stop = random.choice([13,13,13,13,13,13,13,13,13,13])
-        # random_integers = np.random.random_integers(start,stop,(20,20))
-        # flag = bn.rvs(p=0.99, size=(20,20))
-        # #add 10% (1-p) of any value
-        # other_features = np.full((20,20),33)
-        # random_integers[flag==0] = other_features[flag==0]
-        # self.map_volume = CNP.create_custom_map(random_integers)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph))) #CNP.create_custom_map(random.choice(self.custom_maps))
-        # # Set hiker's and drone's locations
-        # #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
-        # #if self.dropping:
-        # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))#(10,10)#(random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  #random.choice([(4,5),(5,5),(5,4),(4,4)]) (7,8) #
-        all_no_goes = []
-        # better random map
-        just_grass = np.full((20, 20), 2)
-        # add some trail, trees
-        updated_map = self.add_blob(just_grass,15,5)[0]
-        for i in range(random.randint(1,10)):
-            updated_map = self.add_blob(updated_map, 50, random.choice([1,3]))[0]
 
-
-        # add some water (maybe)
-        #if random.randint(0,1):
-        updated_map, no_go_points = self.add_blob(updated_map, 450, 15)
-        all_no_goes.append(no_go_points)
-        # add some mountain ridges
-        updated_map, no_go_points = self.add_blob(updated_map, 75, 26)
-        all_no_goes.append(no_go_points)
-        # a few small mountain ridges
-        for i in range(random.randint(1,5)):
-            updated_map, no_go_points = self.add_blob(updated_map, random.randint(1, 100), 25)
-            all_no_goes.append(no_go_points)
-        # add some bushes
-        # small clusters, 5 times
-        for i in range(random.randint(1,8)):
-            updated_map = self.add_blob(updated_map, random.randint(1, 5), 4)[0]
-        # add one campfire
-        updated_map, no_go_points = self.add_blob(updated_map, 0, 33)
-        all_no_goes.append(no_go_points)
-
+        updated_map, hiker, drone, symbolic_terrain_dict = self.generate_experiment_map(just_grass=[False],forest=[True,0,[5,6,7,9,10,11,12,13,14,15,16]],mountain=[True,0,[1,2,3]],in_clearing=[True])
         self.map_volume = CNP.create_custom_map(updated_map)
 
-        # self.map_volume = CNP.create_custom_map(np.random.random_integers(start, stop, (20, 20)))#CNP.create_custom_map(np.random.random_integers(start, stop, (20, 20)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(self.custom_map)#CNP.create_custom_map(np.random.random_integers(start, stop, (20, 20)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(np.random.random_integers(start, stop, (10, 10)))#CNP.create_custom_map(self.custom_map)#CNP.create_custom_map(np.random.random_integers(start, stop, (10, 10)))
-
-        # Set hiker's and drone's location
-        # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
-        # (8, 1)  # (6,3)#
-        hiker = (random.randint(3, self.map_volume['vol'].shape[1] - 3),
-                 random.randint(3, self.map_volume['vol'].shape[1] - 3))
-        while self.hiker_in_no_go_list(hiker, all_no_goes):
-            hiker = (random.randint(3, self.map_volume['vol'].shape[1] - 3),
-                     random.randint(3, self.map_volume['vol'].shape[1] - 3))
-
-
-
-
-        drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))#(hiker[0]-random.randint(-5,5),hiker[1]-random.randint(-5,5))#(random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))#(random.randint(hiker[0]-1,hiker[0]+1),random.randint(hiker[1]-1,hiker[1]+1))#random.choice([(hiker[0]-1, hiker[1]-1),(hiker[0]-1, hiker[1]),(hiker[0], hiker[1]-1)])## Package drop starts close to hiker!!! #(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (8,8) #
-        #else:
-            # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
-            # drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))
-
-        while drone == hiker:
-            print('$$$$$$$$ AWAY !!! $$$$$$$')
-            # drone = (hiker[0]-random.randint(-5,5),hiker[1]-random.randint(-5,5))
-            drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),
-                     random.randint(2, self.map_volume['vol'].shape[1] - 2))
-
+#####START COMMMENT OUT
+        # #self.map_volume = CNP.map_to_volume_dict(_map[0], _map[1], 10, 10)
+        # #Random generated map
+        # # start = random.choice([1,1,1,1,1,1,1,1,1,1])
+        # # stop = random.choice([13,13,13,13,13,13,13,13,13,13])
+        # # random_integers = np.random.random_integers(start,stop,(20,20))
+        # # flag = bn.rvs(p=0.99, size=(20,20))
+        # # #add 10% (1-p) of any value
+        # # other_features = np.full((20,20),33)
+        # # random_integers[flag==0] = other_features[flag==0]
+        # # self.map_volume = CNP.create_custom_map(random_integers)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(np.random.random_integers(start,stop,(self.mapw,self.maph))) #CNP.create_custom_map(random.choice(self.custom_maps))
+        # # # Set hiker's and drone's locations
+        # # #hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
+        # # #if self.dropping:
+        # # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))#(10,10)#(random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  #random.choice([(4,5),(5,5),(5,4),(4,4)]) (7,8) #
+        # all_no_goes = []
+        # # better random map
+        # just_grass = np.full((20, 20), 2)
+        # # add some trail, trees
+        # updated_map = self.add_blob(just_grass,15,5)[0]
+        # for i in range(random.randint(1,10)):
+        #     updated_map = self.add_blob(updated_map, 50, random.choice([1,3]))[0]
+        #
+        #
+        # # add some water (maybe)
+        # #if random.randint(0,1):
+        # updated_map, no_go_points = self.add_blob(updated_map, 450, 15)
+        # all_no_goes.append(no_go_points)
+        # # add some mountain ridges
+        # updated_map, no_go_points = self.add_blob(updated_map, 75, 26)
+        # all_no_goes.append(no_go_points)
+        # # a few small mountain ridges
+        # for i in range(random.randint(1,5)):
+        #     updated_map, no_go_points = self.add_blob(updated_map, random.randint(1, 100), 25)
+        #     all_no_goes.append(no_go_points)
+        # # add some bushes
+        # # small clusters, 5 times
+        # for i in range(random.randint(1,8)):
+        #     updated_map = self.add_blob(updated_map, random.randint(1, 5), 4)[0]
+        # # add one campfire
+        # updated_map, no_go_points = self.add_blob(updated_map, 0, 33)
+        # all_no_goes.append(no_go_points)
+        #
+        # self.map_volume = CNP.create_custom_map(updated_map)
+        #
+        # # self.map_volume = CNP.create_custom_map(np.random.random_integers(start, stop, (20, 20)))#CNP.create_custom_map(np.random.random_integers(start, stop, (20, 20)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(self.custom_map)#CNP.create_custom_map(np.random.random_integers(start, stop, (20, 20)))#CNP.map_to_volume_dict(_map[0],_map[1], self.mapw, self.maph)#CNP.create_custom_map(np.random.random_integers(start, stop, (10, 10)))#CNP.create_custom_map(self.custom_map)#CNP.create_custom_map(np.random.random_integers(start, stop, (10, 10)))
+        #
+        # # Set hiker's and drone's location
+        # # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) #(8,8) #
+        # # (8, 1)  # (6,3)#
+        # hiker = (random.randint(3, self.map_volume['vol'].shape[1] - 3),
+        #          random.randint(3, self.map_volume['vol'].shape[1] - 3))
+        # while self.hiker_in_no_go_list(hiker, all_no_goes):
+        #     hiker = (random.randint(3, self.map_volume['vol'].shape[1] - 3),
+        #              random.randint(3, self.map_volume['vol'].shape[1] - 3))
+        #
+        #
+        #
+        #
+        # drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))#(hiker[0]-random.randint(-5,5),hiker[1]-random.randint(-5,5))#(random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))#(random.randint(hiker[0]-1,hiker[0]+1),random.randint(hiker[1]-1,hiker[1]+1))#random.choice([(hiker[0]-1, hiker[1]-1),(hiker[0]-1, hiker[1]),(hiker[0], hiker[1]-1)])## Package drop starts close to hiker!!! #(random.randint(2, self.map_volume['vol'].shape[1] - 1), random.randint(2, self.map_volume['vol'].shape[1] - 2)) # (8,8) #
+        # #else:
+        #     # hiker = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))  # (7,8) #
+        #     # drone = (random.randint(2, self.map_volume['vol'].shape[1] - 2), random.randint(2, self.map_volume['vol'].shape[1] - 2))
+        #
+        # while drone == hiker:
+        #     print('$$$$$$$$ AWAY !!! $$$$$$$')
+        #     # drone = (hiker[0]-random.randint(-5,5),hiker[1]-random.randint(-5,5))
+        #     drone = (random.randint(2, self.map_volume['vol'].shape[1] - 1),
+        #              random.randint(2, self.map_volume['vol'].shape[1] - 2))
+#####END COMMENT OUT
         self.original_map_volume = copy.deepcopy(self.map_volume)
 
         # self.local_coordinates = [local_x,local_y]
