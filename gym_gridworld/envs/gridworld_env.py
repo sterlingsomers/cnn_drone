@@ -498,6 +498,33 @@ class GridworldEnv(gym.Env):
             reward = -0.002 # If you put -0.1 then it prefers to go down and crash all the time for (n-step=32)!!!
             return (observation, reward, done, info)
 
+    def add_blob_inline(self, map_array, n_cycles, value):
+        points = []
+        random_point = np.random.randint(0, map_array.shape[0], (1, 2))[0]  # assumes a square
+        points.append(random_point)
+        #pertubations_x = [(0,1),(0,-1),(1,)]
+        while len(points) < n_cycles:
+        #for i in range(n_cycles):
+            a_point = random.choice(points)
+            pertubation = np.random.randint(-1, 1, (1, 2))[0]
+            while pertubation[0] == 0 and pertubation[1] == 0:
+                #cannot be the same point
+                pertubation = np.random.randint(-1, 1, (1, 2))[0]
+            added_point = a_point + pertubation
+            while added_point[0] < 0 or added_point[1] < 0 or added_point[0] > map_array.shape[0] or added_point[1] > map_array.shape[0]:
+                #the point cannot be negative, or it will appear on the opposite side of the map
+                #5 because the squares are 5x5.
+                pertubation = np.random.randint(-1, 1, (1, 2))[0]
+                while pertubation[0] == 0 and pertubation[1] == 0:
+                    pertubation = np.random.randint(-1, 1, (1, 2))[0]
+                added_point = a_point + pertubation
+            if not self.arreq_in_list(added_point, points):
+                #cannot already have that point - this may be problematic
+                points.append(a_point + pertubation)
+        #return_array = np.copy(map_array)
+        for point in points:
+           map_array[point[0], point[1]] = value
+        #return (return_array, points)
 
     def add_blob(self, map_array, n_cycles, value):
         points = []
@@ -588,7 +615,8 @@ class GridworldEnv(gym.Env):
     #     #     #print("scale:",(1/((self.dist**2+1e-7))), "dist=",self.dist+1e-7, "alt=", self.altitude, "drone:",drone, "hiker:", hiker,"found:", self.check_for_hiker())
     #     return (self.generate_observation(), reward, done, info)
 
-    def generate_experiment_map(self,just_grass=[True],vegitation=[True,4],forest=[False,0,[]],river=[False,0],in_canyon=[False],mountain=[False,0,[]],in_clearing=[False]):
+    def generate_experiment_map(self,just_grass=[True],vegitation=[True,4],forest=[False,0,[]],river=[False,0],in_canyon=[False],
+                                mountain=[False,0,[]],in_clearing=[False],hiker_segment=[0,0],drone_segment=[0,0]):
         '''Returns a (map,hiker,drone) tuple.  setup by parameters. Procedurally bound random.
         Higher-altitude features overwrite lower altitude features. If vegitation and forest are set on the same quadrant, for example,
         forest can overlay vegitation.
@@ -613,6 +641,39 @@ class GridworldEnv(gym.Env):
         #First make an all grass map
         updated_map = np.full((self.mapw,self.maph),2) #2 == grass
         #A 10x10 is rather constrained because terrain features need to go around the hiker
+
+
+        #updated version
+        rows = np.vsplit(updated_map,5)
+        map_squares = [np.hsplit(row,5) for row in rows]
+        #map_squares[0][0][:] = 3
+        #map_squares[0][1][:] = 3
+        #map_squares[1][1][:] = 3
+        #those examples fill the segment
+
+        #now split up the indexes in the same way
+        indexes = list(np.ndindex(updated_map.shape))
+        indices = np.empty(len(indexes), dtype=object)
+        indices[:] = indexes
+        indices = indices.reshape((20, 20))
+
+        indices_rows = np.vsplit(indices,5)
+        indices_squares = [np.hsplit(row,5) for row in indices_rows]
+
+
+        hiker_point = [0,0]
+        drone_point = [0,0]
+
+
+        if just_grass[0]:
+            #place the hiker and drone in the segment and return
+            points = indices_squares[hiker_segment[0]][hiker_segment[1]]
+            #pick a random position within the segment
+            hiker_point = random.choice(random.choice(points))
+
+
+         #end updated version
+
 
         #top_left,top_right,bottom_left,bottom_right = np.array_split(updated_map,4)
         #upper_half = np.hsplit(np.vsplit(updated_map, 2)[0], 2)
@@ -703,11 +764,13 @@ class GridworldEnv(gym.Env):
                 #you can select which squares to put random forrests
                 for sq in forest[2]:
                     #each sq is a v. you subtract 1 for indexing
+                    #Try using the blobs
                     sq = sq - 1
-                    indices = list(np.ndindex(map_squares[sq].shape))
-                    np.random.shuffle(indices)
-                    for t in range(random.choice(range(24,25))):
-                        map_squares[sq][indices[t][0],indices[t][1]] = 3
+                    self.add_blob_inline(map_squares[sq],3,3)
+                    #indices = list(np.ndindex(map_squares[sq].shape))
+                    #np.random.shuffle(indices)
+                    #for t in range(random.choice(range(24,25))):
+                    #    map_squares[sq][indices[t][0],indices[t][1]] = 3
 
             hiker = (random.randint(3, self.mapw - 3),
                      random.randint(3, self.maph - 3))
@@ -722,8 +785,37 @@ class GridworldEnv(gym.Env):
         if mountain[0]:
             #generate some mountains.
             #for now, they are obstacles, we can do something more intelligent later.
-            if mountain[2]:
-                #list of spots where to put mountain
+            # Random Forests
+            if mountain[1]:
+                # for: The number of quandrants to add trees to
+                for i in range(mountain[1]):
+                    # get the indices of the quadrants
+                    indices = list(np.ndindex(map_squares[i].shape))
+                    sq = map_squares.pop()
+                    # shuffle those
+                    np.random.shuffle(indices)
+                    for t in range(random.choice(range(24, 25))):
+                        # should be MINIMUM 20... but...
+                        # turn 20 of those points into trees
+                        # quad = map_squares.pop()
+                        sq[indices[t][0], indices[t][1]] = 3
+            else:
+                # you can select which squares to put random forrests
+                for sq in mountain[2]:
+                    # each sq is a v. you subtract 1 for indexing
+                    sq = sq - 1
+                    indices = list(np.ndindex(map_squares[sq].shape))
+                    np.random.shuffle(indices)
+                    for t in range(random.choice(range(24, 25))):
+                        map_squares[sq][indices[t][0], indices[t][1]] = 25#mountain ridge = 25
+
+            hiker = (random.randint(3, self.mapw - 3),
+                     random.randint(3, self.maph - 3))
+            drone = (random.randint(3, self.mapw - 3),
+                     random.randint(3, self.maph - 3))
+            while drone == hiker:
+                drone = (random.randint(3, self.mapw - 3),
+                         random.randint(3, self.maph - 3))
 
 
         if in_canyon[0]:
@@ -778,7 +870,7 @@ class GridworldEnv(gym.Env):
         self.reward = 0
         _map = random.choice(self.maps)
 
-        updated_map, hiker, drone, symbolic_terrain_dict = self.generate_experiment_map(just_grass=[False],forest=[True,0,[5,6,7,9,10,11,12,13,14,15,16]],mountain=[True,0,[1,2,3]],in_clearing=[True])
+        updated_map, hiker, drone, symbolic_terrain_dict = self.generate_experiment_map(just_grass=[True],forest=[True,0,[5,6,7,9,10,11,12,13,14,15,16]],mountain=[True,0,[1,2,3]],in_clearing=[True])
         self.map_volume = CNP.create_custom_map(updated_map)
 
 #####START COMMMENT OUT
