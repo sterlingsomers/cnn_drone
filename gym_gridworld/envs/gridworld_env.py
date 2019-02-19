@@ -624,6 +624,7 @@ class GridworldEnv(gym.Env):
         ###FOREST
         ###
         #forest=[T/F,number of squares,specific squares list]
+        #specific squares are identified by their index [(0,0),(1,1),(2,2)...] for diagonal line
         #if true, it will put trees
         #the number of squares you want to include
         #a list of squares
@@ -646,9 +647,14 @@ class GridworldEnv(gym.Env):
         #updated version
         rows = np.vsplit(updated_map,5)
         map_squares = [np.hsplit(row,5) for row in rows]
-        #map_squares[0][0][:] = 3
+        map_squares[0][0][:] = 3
         #map_squares[0][1][:] = 3
-        #map_squares[1][1][:] = 3
+        map_squares[1][1][:] = 3
+        map_squares[2][2][:] = 15
+        map_squares[2][0][:] = 2
+        map_squares[2][1][:] = 15
+        map_squares[2][3][:] = 15
+        map_squares[2][4][:] = 2
         #those examples fill the segment
 
         #now split up the indexes in the same way
@@ -667,10 +673,43 @@ class GridworldEnv(gym.Env):
 
         if just_grass[0]:
             #place the hiker and drone in the segment and return
-            points = indices_squares[hiker_segment[0]][hiker_segment[1]]
+            hiker_points = indices_squares[hiker_segment[0]][hiker_segment[1]]
             #pick a random position within the segment
-            hiker_point = random.choice(random.choice(points))
+            hiker_point = random.choice(random.choice(hiker_points))
 
+            drone_points = indices_squares[drone_segment[0]][drone_segment[1]]
+            drone_point = random.choice(random.choice(drone_points))
+
+            return updated_map, hiker_point, drone_point, {}
+
+        if forest[0]:
+            # Random Forests
+            if forest[1]:
+                # for: The number of quandrants to add trees to
+                for i in range(forest[1]):
+                    # get the indices of the quadrants
+                    indices = list(np.ndindex(map_squares[i].shape))
+                    sq = map_squares.pop()
+                    # shuffle those
+                    np.random.shuffle(indices)
+                    for t in range(random.choice(range(24, 25))):
+                        # should be MINIMUM 20... but...
+                        # turn 20 of those points into trees
+                        # quad = map_squares.pop()
+                        sq[indices[t][0], indices[t][1]] = 3
+            else:
+                # you can select which squares to put random forrests
+                for sq in forest[2]:
+                    # each sq is a v. you subtract 1 for indexing
+                    # Try using the blobs
+                    sq = sq - 1
+                    #self.add_blob_inline(map_squares[sq], 3, 3)
+                    #blobs don't work yet, just fill the whole thing
+                    map_squares[5][:] = 3
+                    # indices = list(np.ndindex(map_squares[sq].shape))
+                    # np.random.shuffle(indices)
+                    # for t in range(random.choice(range(24,25))):
+                    #    map_squares[sq][indices[t][0],indices[t][1]] = 3
 
          #end updated version
 
@@ -870,7 +909,12 @@ class GridworldEnv(gym.Env):
         self.reward = 0
         _map = random.choice(self.maps)
 
-        updated_map, hiker, drone, symbolic_terrain_dict = self.generate_experiment_map(just_grass=[True],forest=[True,0,[5,6,7,9,10,11,12,13,14,15,16]],mountain=[True,0,[1,2,3]],in_clearing=[True])
+        updated_map, hiker, drone, symbolic_terrain_dict = self.generate_experiment_map(just_grass=[True],
+                                                                                        forest=[True,0,[5,6,7,9,10,11,12,13,14,15,16]],
+                                                                                        mountain=[True,0,[1,2,3]],
+                                                                                        in_clearing=[True],
+                                                                                        hiker_segment=[1,1],
+                                                                                        drone_segment=[4,4])
         self.map_volume = CNP.create_custom_map(updated_map)
 
 #####START COMMMENT OUT
