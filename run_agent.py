@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 from datetime import datetime
+import time
 from time import sleep
 import numpy as np
 #from functools import partial
@@ -35,7 +36,7 @@ flags.DEFINE_bool("visualize", False, "Whether to render with pygame.")
 flags.DEFINE_integer("resolution", 32, "Resolution for screen and minimap feature layers.")
 flags.DEFINE_integer("step_mul", 1, "Game steps per agent step.")
 flags.DEFINE_integer("n_envs", 40, "Number of environments to run in parallel")
-flags.DEFINE_integer("episodes", 10, "Number of complete episodes")
+flags.DEFINE_integer("episodes", 100, "Number of complete episodes")
 flags.DEFINE_integer("n_steps_per_batch", 32,
     "Number of steps per batch, if None use 8 for a2c and 128 for ppo")  # (MINE) TIMESTEPS HERE!!! You need them cauz you dont want to run till it finds the beacon especially at first episodes - will take forever
 flags.DEFINE_integer("all_summary_freq", 50, "Record all summaries every n batch")
@@ -233,125 +234,153 @@ def main():
     else:
         n_batches = -1
 
-
-    if FLAGS.training:
-        i = 0
-
-        try:
-            runner.reset()
-            while True:
-                #runner.reset()
-                if i % 500 == 0:
-                    _print(i)
-                if i % 4000 == 0:
-                    _save_if_training(agent)
-                runner.run_batch()  # (MINE) HERE WE RUN MAIN LOOP for while true
-                #runner.run_batch_solo_env()
-                i += 1
-                if 0 <= n_batches <= i: #when you reach the certain amount of batches break
+    #the following is for DATA COLLECTION
+    stucks = 0
+    before = time.time()
+    if not FLAGS.training:
+        running = True
+        while runner.episode_counter <= (FLAGS.episodes - 1) and running == True:
+            runner.reset_demo()
+            done=0
+            step_count = 0
+            while not done:
+                step_count += 1
+                obs, action, value, reward, done = runner.run_trained_batch()
+                if step_count >= 120: #if the drone gets stuck...
+                    print("Drone stuck.")
+                    stucks += 1
                     break
-        except KeyboardInterrupt:
-            pass
-    else: # Test the agent
-        # try:
-        #     runner.reset_demo() # Cauz of differences in the arrangement of the dictionaries
-        #     while runner.episode_counter <= (FLAGS.episodes - 1):
-        #         #runner.reset()
-        #         # You need the -1 as counting starts from zero so for counter 3 you do 4 episodes
-        #         runner.run_trained_batch()  # (MINE) HERE WE RUN MAIN LOOP for while true
-        # except KeyboardInterrupt:
-        #     pass
-        try:
-            import pygame
-            import time
-            import random
-            # pygame.font.get_fonts() # Run it to get a list of all system fonts
-            display_w = 800
-            display_h = 720
 
-            BLUE = (128, 128, 255)
-            DARK_BLUE = (1, 50, 130)
-            RED = (255, 192, 192)
-            BLACK = (0, 0, 0)
-            WHITE = (255, 255, 255)
+            runner.episode_counter += 1
+            print("Episode", runner.episode_counter, " done")
+    print("Stucks: ", stucks)
+    print("Time:", time.time() - before)
+    #END DATA COLLECTION
 
-            pygame.init()
-            gameDisplay = pygame.display.set_mode((display_w, display_h))
-            gameDisplay.fill(DARK_BLUE)
-            pygame.display.set_caption('Neural Introspection')
-            clock = pygame.time.Clock()
-
-            def screen_mssg_variable(text, variable, area):
-                font = pygame.font.SysFont('arial', 16)
-                txt = font.render(text + str(variable), True, WHITE)
-                gameDisplay.blit(txt, area)
-                #pygame.display.update()
-
-            def process_img(img, x,y):
-                # swap the axes else the image will come not the same as the matplotlib one
-                img = img.transpose(1,0,2)
-                surf = pygame.surfarray.make_surface(img)
-                surf = pygame.transform.scale(surf, (300, 300))
-                gameDisplay.blit(surf, (x, y))
-
-            running = True
-            while runner.episode_counter <= (FLAGS.episodes - 1) and running==True:
-                print('Episode: ', runner.episode_counter)
-                runner.reset_demo()  # Cauz of differences in the arrangement of the dictionaries
-                map_xy = runner.envs.map_image
-                map_alt = runner.envs.alt_view
-                process_img(map_xy, 20, 20)
-                process_img(map_alt, 20, 400)
-                pygame.display.update()
-                # Quit pygame if the (X) button is pressed on the top left of the window
-                # Seems that without this for event quit doesnt show anything!!!
-                # Also it seems that the pygame.event.get() is responsible to REALLY updating the screen contents
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        running = False
-                sleep(1.5)
-                # Timestep counter
-                t=0
-                rewards = []
-                done = 0
-                while done==0:
-                    # RUN THE MAIN LOOP
-                    obs, action, value, reward, done = runner.run_trained_batch()
-
-                    rewards.append(reward)
-                    if done:
-                        score = sum(rewards)
-                        print(">>>>>>>>>>>>>>>>>>>>>>>>>>> episode %d ended in %d steps. Score %f" % (runner.episode_counter, t, score))
-                        runner.episode_counter += 1
-
-                    screen_mssg_variable("Value    : ", np.round(value,3), (168, 350))
-                    screen_mssg_variable("Reward: ", np.round(reward,3), (168, 372))
-                    pygame.display.update()
-                    pygame.event.get()
-                    sleep(1.5)
-
-                    if action==15:
-                        screen_mssg_variable("Package state:", runner.envs.package_state, (20, 350)) # The update of the text will be at the same time with the update of state
-                        pygame.display.update()
-                        pygame.event.get()  # Update the screen
-                        sleep(1.5)
-
-                    # BLIT!!!
-                    # First Background covering everyything from previous session
-                    gameDisplay.fill(DARK_BLUE)
-                    map_xy = obs[0]['img']
-                    map_alt = obs[0]['nextstepimage']
-                    process_img(map_xy, 20, 20)
-                    process_img(map_alt, 20, 400)
-                    # Update finally the screen with all the images you blitted in the run_trained_batch
-                    pygame.display.update() # Updates only the blitted parts of the screen, pygame.display.flip() updates the whole screen
-                    pygame.event.get() # Show the last state and then reset
-                    sleep(1.2)
-                    t += 1
-                clock.tick(15)
-
-        except KeyboardInterrupt:
-            pass
+    #Start pygame DISPLAY
+    # if FLAGS.training and 0:
+    #     i = 0
+    #
+    #     try:
+    #         runner.reset()
+    #         while True:
+    #             #runner.reset()
+    #             if i % 500 == 0:
+    #                 _print(i)
+    #             if i % 4000 == 0:
+    #                 _save_if_training(agent)
+    #             runner.run_batch()  # (MINE) HERE WE RUN MAIN LOOP for while true
+    #             #runner.run_batch_solo_env()
+    #             i += 1
+    #             if 0 <= n_batches <= i: #when you reach the certain amount of batches break
+    #                 break
+    #     except KeyboardInterrupt:
+    #         pass
+    # else: # Test the agent
+    #     # try:
+    #     #     runner.reset_demo() # Cauz of differences in the arrangement of the dictionaries
+    #     #     while runner.episode_counter <= (FLAGS.episodes - 1):
+    #     #         #runner.reset()
+    #     #         # You need the -1 as counting starts from zero so for counter 3 you do 4 episodes
+    #     #         runner.run_trained_batch()  # (MINE) HERE WE RUN MAIN LOOP for while true
+    #     # except KeyboardInterrupt:
+    #     #     pass
+    #     try:
+    #         import pygame
+    #         import time
+    #         import random
+    #         # pygame.font.get_fonts() # Run it to get a list of all system fonts
+    #         display_w = 800
+    #         display_h = 720
+    #
+    #         BLUE = (128, 128, 255)
+    #         DARK_BLUE = (1, 50, 130)
+    #         RED = (255, 192, 192)
+    #         BLACK = (0, 0, 0)
+    #         WHITE = (255, 255, 255)
+    #
+    #         pygame.init()
+    #         gameDisplay = pygame.display.set_mode((display_w, display_h))
+    #         gameDisplay.fill(DARK_BLUE)
+    #         pygame.display.set_caption('Neural Introspection')
+    #         clock = pygame.time.Clock()
+    #
+    #         def screen_mssg_variable(text, variable, area):
+    #             font = pygame.font.SysFont('arial', 16)
+    #             txt = font.render(text + str(variable), True, WHITE)
+    #             gameDisplay.blit(txt, area)
+    #             #pygame.display.update()
+    #
+    #         def process_img(img, x,y):
+    #             # swap the axes else the image will come not the same as the matplotlib one
+    #             img = img.transpose(1,0,2)
+    #             surf = pygame.surfarray.make_surface(img)
+    #             surf = pygame.transform.scale(surf, (300, 300))
+    #             gameDisplay.blit(surf, (x, y))
+    #
+    #         running = True
+    #         sleep_time = 1.2 #1.2 is reasonable
+    #         while runner.episode_counter <= (FLAGS.episodes - 1) and running==True:
+    #             print('Episode: ', runner.episode_counter)
+    #             runner.reset_demo()  # Cauz of differences in the arrangement of the dictionaries
+    #             map_xy = runner.envs.map_image
+    #             map_alt = runner.envs.alt_view
+    #             process_img(map_xy, 20, 20)
+    #             process_img(map_alt, 20, 400)
+    #             pygame.display.update()
+    #             # Quit pygame if the (X) button is pressed on the top left of the window
+    #             # Seems that without this for event quit doesnt show anything!!!
+    #             # Also it seems that the pygame.event.get() is responsible to REALLY updating the screen contents
+    #             for event in pygame.event.get():
+    #                 if event.type == pygame.QUIT:
+    #                     running = False
+    #             sleep(sleep_time)
+    #             # Timestep counter
+    #             t=0
+    #             rewards = []
+    #             done = 0
+    #             while done==0:
+    #                 # RUN THE MAIN LOOP
+    #                 obs, action, value, reward, done = runner.run_trained_batch()
+    #
+    #                 #I will do data collection here because it's easy
+    #                 #but it would be preferrable not to display anything (slightly faster, I assume)
+    #                 #runner.envs.map_volume['vol'] should have all the information
+    #                 rewards.append(reward)
+    #                 if done:
+    #                     score = sum(rewards)
+    #                     print(">>>>>>>>>>>>>>>>>>>>>>>>>>> episode %d ended in %d steps. Score %f" % (runner.episode_counter, t, score))
+    #                     runner.episode_counter += 1
+    #
+    #                 screen_mssg_variable("Value    : ", np.round(value,3), (168, 350))
+    #                 screen_mssg_variable("Reward: ", np.round(reward,3), (168, 372))
+    #                 pygame.display.update()
+    #                 pygame.event.get()
+    #                 sleep(sleep_time)
+    #
+    #                 if action==15:
+    #                     screen_mssg_variable("Package state:", runner.envs.package_state, (20, 350)) # The update of the text will be at the same time with the update of state
+    #                     pygame.display.update()
+    #                     pygame.event.get()  # Update the screen
+    #                     sleep(sleep_time)
+    #
+    #                 # BLIT!!!
+    #                 # First Background covering everyything from previous session
+    #                 gameDisplay.fill(DARK_BLUE)
+    #                 map_xy = obs[0]['img']
+    #                 map_alt = obs[0]['nextstepimage']
+    #                 process_img(map_xy, 20, 20)
+    #                 process_img(map_alt, 20, 400)
+    #                 # Update finally the screen with all the images you blitted in the run_trained_batch
+    #                 pygame.display.update() # Updates only the blitted parts of the screen, pygame.display.flip() updates the whole screen
+    #                 pygame.event.get() # Show the last state and then reset
+    #                 sleep(sleep_time)
+    #                 t += 1
+    #             clock.tick(15)
+    #
+    #     except KeyboardInterrupt:
+    #         pass
+    #END pygame DISPLAY
 
     print("Okay. Work is done")
     #_print(i)
