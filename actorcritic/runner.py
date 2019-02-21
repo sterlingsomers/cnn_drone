@@ -96,7 +96,7 @@ class Runner(object):
         for n in range(self.n_steps):
             # could calculate value estimate from obs when do training
             # but saving values here will make n step reward calculation a bit easier
-            action_ids, value_estimate = self.agent.step(latest_obs)
+            action_ids, value_estimate, representation, fc = self.agent.step(latest_obs)
             print('|step:', n, '|actions:', action_ids)  # (MINE) If you put it after the envs.step the SUCCESS appears at the envs.step so it will appear oddly
             # (MINE) Store actions and value estimates for all steps
             mb_values[:, n] = value_estimate
@@ -172,7 +172,7 @@ class Runner(object):
         latest_obs = self.latest_obs # (MINE) =state(t)
 
         # action = agent(state)
-        action_ids, value_estimate, representation = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
+        action_ids, value_estimate, representation, fc = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
         print('|actions:', action_ids)
         obs_raw = self.envs.step(action_ids) # It will also visualize the next observation if all the episodes have ended as after success it retunrs the obs from reset
         latest_obs = self.obs_processer.process(obs_raw[0:-3])  # Take only the first element which is the rgb image and ignore the reward, done etc
@@ -186,4 +186,4 @@ class Runner(object):
         self.batch_counter += 1
         #print('Batch %d finished' % self.batch_counter)
         sys.stdout.flush()
-        return obs_raw[0:-3], action_ids[0], value_estimate[0], obs_raw[1], obs_raw[2]
+        return obs_raw[0:-3], action_ids[0], value_estimate[0], obs_raw[1], obs_raw[2], representation, fc

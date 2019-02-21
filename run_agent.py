@@ -13,6 +13,7 @@ from absl import flags
 from actorcritic.agent import ActorCriticAgent, ACMode
 from actorcritic.runner import Runner, PPORunParams
 # from common.multienv import SubprocVecEnv, make_sc2env, SingleEnv, make_env
+import pickle
 
 import tensorflow as tf
 # import tensorflow.contrib.eager as tfe
@@ -236,6 +237,8 @@ def main():
 
     #the following is for DATA COLLECTION
     stucks = 0
+    all_data = []
+    mission_data = [] #records by mission - throw away mission where stuck
     before = time.time()
     if not FLAGS.training:
         running = True
@@ -245,16 +248,26 @@ def main():
             step_count = 0
             while not done:
                 step_count += 1
-                obs, action, value, reward, done = runner.run_trained_batch()
+                obs, action, value, reward, done, representation, fc = runner.run_trained_batch()
+                #data that we are interested in: volume, action, drone heading (not in volume)
+                #we can work on the data later with specialized tools
+                datum = {"drone_heading":runner.envs.heading,
+                         "map_volume":runner.envs.map_volume,
+                         "fc":fc}
+                mission_data.append(datum)
                 if step_count >= 120: #if the drone gets stuck...
                     print("Drone stuck.")
                     stucks += 1
                     break
-
+            #record the data once the mission is complete
+            all_data.append(mission_data)
             runner.episode_counter += 1
             print("Episode", runner.episode_counter, " done")
     print("Stucks: ", stucks)
     print("Time:", time.time() - before)
+    #pickle everything
+    with open('all_data.pkl', 'wb') as handle:
+        pickle.dump(all_data, handle)
     #END DATA COLLECTION
 
     #Start pygame DISPLAY

@@ -159,7 +159,7 @@ class FullyConvPolicy:
 
         map_output_flat = layers.flatten(self.map_output)
         # (MINE) This is the last layer (fully connected -fc) for the non-spatial (categorical) actions
-        fc1 = layers.fully_connected(
+        self.fc1 = layers.fully_connected(
             map_output_flat,
             num_outputs=256,
             activation_fn=tf.nn.relu,
@@ -169,14 +169,14 @@ class FullyConvPolicy:
         # (MINE) From the previous layer you extract action_id_probs (non spatial - categorical - actions) and value
         # estimate
         action_id_probs = layers.fully_connected(
-            fc1,
+            self.fc1,
             num_outputs=self.num_actions,#len(actions.FUNCTIONS),
             activation_fn=tf.nn.softmax,
             scope="action_id",
             trainable=self.trainable
         )
         value_estimate = tf.squeeze(layers.fully_connected(
-            fc1,
+            self.fc1,
             num_outputs=1,
             activation_fn=None,
             scope='value',
