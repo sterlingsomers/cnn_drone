@@ -252,6 +252,7 @@ def main():
                 #data that we are interested in: volume, action, drone heading (not in volume)
                 #we can work on the data later with specialized tools
                 datum = {"drone_heading":runner.envs.heading,
+                         "drone_altitude":runner.envs.altitude,
                          "map_volume":runner.envs.map_volume,
                          "fc":fc}
                 mission_data.append(datum)
