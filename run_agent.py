@@ -175,6 +175,35 @@ def main():
     print("Requested environments created successfully")
     #env = gym.make('gridworld-v0')
     tf.reset_default_graph()
+    # Make drop agent
+    drop_agent = ActorCriticAgent(
+        mode=FLAGS.agent_mode,
+        sess=[],
+        spatial_dim=FLAGS.resolution,
+        # Here you pass the resolution which is used in the step for the output probabilities map
+        unit_type_emb_dim=5,
+        loss_value_weight=FLAGS.loss_value_weight,
+        entropy_weight_action_id=FLAGS.entropy_weight_action,
+        entropy_weight_spatial=FLAGS.entropy_weight_spatial,
+        scalar_summary_freq=FLAGS.scalar_summary_freq,
+        all_summary_freq=FLAGS.all_summary_freq,
+        summary_path=full_summary_path,
+        max_gradient_norm=FLAGS.max_gradient_norm,
+        num_actions=envs.action_space.n
+    )
+
+    drop_graph = tf.Graph()
+    with drop_graph.as_default():
+        drop_agent.build_model()
+
+    drop_sess = tf.Session(graph=drop_graph)
+    drop_agent.sess = drop_sess
+
+    with drop_graph.as_default():
+        if os.path.exists(full_chekcpoint_path):
+            drop_agent.load(full_chekcpoint_path)
+
+
     # The following lines fix the problem with using more than 2 envs!!!
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
@@ -293,7 +322,7 @@ def main():
                 surf = pygame.surfarray.make_surface(img)
                 surf = pygame.transform.scale(surf, (300, 300))
                 gameDisplay.blit(surf, (x, y))
-
+            sleep_time = 0.5
             running = True
             while runner.episode_counter <= (FLAGS.episodes - 1) and running==True:
                 print('Episode: ', runner.episode_counter)
@@ -309,7 +338,7 @@ def main():
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
-                sleep(1.5)
+                sleep(sleep_time)
                 # Timestep counter
                 t=0
                 rewards = []
@@ -328,7 +357,7 @@ def main():
                     screen_mssg_variable("Reward: ", np.round(reward,3), (168, 372))
                     pygame.display.update()
                     pygame.event.get()
-                    sleep(1.5)
+                    sleep(sleep_time)
 
                     if action==15:
                         screen_mssg_variable("Package state:", runner.envs.package_state, (20, 350)) # The update of the text will be at the same time with the update of state
@@ -346,7 +375,7 @@ def main():
                     # Update finally the screen with all the images you blitted in the run_trained_batch
                     pygame.display.update() # Updates only the blitted parts of the screen, pygame.display.flip() updates the whole screen
                     pygame.event.get() # Show the last state and then reset
-                    sleep(1.2)
+                    sleep(sleep_time)
                     t += 1
                 clock.tick(15)
 
