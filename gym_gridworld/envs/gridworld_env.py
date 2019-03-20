@@ -941,7 +941,7 @@ class GridworldEnv(gym.Env):
                      [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],]
         drawn_map = np.array(drawn_map)
         self.map_volume = CNP.create_custom_map(drawn_map)
-        hiker = (3,3)
+        hiker = (4,4)
         drone = (17,17)
         self.altitude = 1
         # end DRAWN world
