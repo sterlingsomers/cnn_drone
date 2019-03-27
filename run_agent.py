@@ -238,12 +238,14 @@ def main():
     #the following is for DATA COLLECTION
     stucks = 0
     all_data = []
-    mission_data = [] #records by mission - throw away mission where stuck
+
     before = time.time()
     if not FLAGS.training:
         running = True
         while runner.episode_counter <= (FLAGS.episodes - 1) and running == True:
             runner.reset_demo()
+            mission_data = []  # records by mission - throw away mission where stuck
+
             done=0
             step_count = 0
             while not done:
@@ -259,6 +261,7 @@ def main():
                 if step_count >= 120: #if the drone gets stuck...
                     print("Drone stuck.")
                     stucks += 1
+                    done = True
                     break
             #record the data once the mission is complete
             all_data.append(mission_data)

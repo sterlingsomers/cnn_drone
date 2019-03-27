@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 
+all_data = ''
 with open('all_data.pkl', 'rb') as handle:
     all_data = pickle.load(handle)
 #each entry in all_data is a mission
