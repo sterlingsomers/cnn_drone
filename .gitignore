@@ -217,3 +217,4 @@ _files/
 baselines/
 pysc2/
 .DS_Store
+images/*
