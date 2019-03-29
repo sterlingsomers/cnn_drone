@@ -37,7 +37,7 @@ flags.DEFINE_bool("visualize", False, "Whether to render with pygame.")
 flags.DEFINE_integer("resolution", 32, "Resolution for screen and minimap feature layers.")
 flags.DEFINE_integer("step_mul", 1, "Game steps per agent step.")
 flags.DEFINE_integer("n_envs", 40, "Number of environments to run in parallel")
-flags.DEFINE_integer("episodes", 100, "Number of complete episodes")
+flags.DEFINE_integer("episodes", 500, "Number of complete episodes")
 flags.DEFINE_integer("n_steps_per_batch", 32,
     "Number of steps per batch, if None use 8 for a2c and 128 for ppo")  # (MINE) TIMESTEPS HERE!!! You need them cauz you dont want to run till it finds the beacon especially at first episodes - will take forever
 flags.DEFINE_integer("all_summary_freq", 50, "Record all summaries every n batch")
@@ -256,10 +256,14 @@ def main():
                 datum = {"drone_heading":runner.envs.heading,
                          "drone_altitude":runner.envs.altitude,
                          "map_volume":runner.envs.map_volume,
-                         "fc":fc}
+                         "fc":fc,
+                         'stuck':False,
+                         'crash':runner.envs.crash}
+                #I want to know if there was a crash, too - for stats later.
                 mission_data.append(datum)
                 if step_count >= 120: #if the drone gets stuck...
                     print("Drone stuck.")
+                    datum['stuck'] = True
                     stucks += 1
                     done = True
                     break

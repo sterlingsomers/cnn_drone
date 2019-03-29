@@ -38,3 +38,13 @@ def process_step(step_data):
 #cycle through the missions, then each step in the mission
 
 print("done.")
+stucks = 0
+crashes = 0
+for epi in all_data:
+    last_step = epi[-1]
+    if last_step['stuck']:
+        stucks += 1
+    if last_step['crash']:
+        crashes += 1
+
+print(stucks, crashes)

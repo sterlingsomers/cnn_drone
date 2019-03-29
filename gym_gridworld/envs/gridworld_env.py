@@ -76,6 +76,7 @@ class GridworldEnv(gym.Env):
         self.obs_shape = [100,100,3]
         self.observation_space = spaces.Box(low=0, high=255, shape=self.obs_shape)
         self.real_actions = False
+        self.crash = False
 
         if self.real_actions:
             self.mavsimhandler = MavsimHandler()
@@ -471,7 +472,7 @@ class GridworldEnv(gym.Env):
             crash = self.check_for_crash()
             info['success'] = not crash
             #self.render()
-
+            self.crash = crash
             if crash:
                 reward = 0
                 done = True
@@ -496,6 +497,7 @@ class GridworldEnv(gym.Env):
             self.dist_old = self.dist
             #reward = (self.alt_rewards[self.altitude] * 0.1) * ( 1/((self.dist** 2) + 1e-7) )  # -0.01 + # previous reward = (self.alt_rewards[self.altitude] * 0.1) * ( 1 / self.dist** 2 + 1e-7 )  # -0.01 + #
             reward = -0.002 # If you put -0.1 then it prefers to go down and crash all the time for (n-step=32)!!!
+
             return (observation, reward, done, info)
 
     def add_blob_inline(self, map_array, n_cycles, value):
