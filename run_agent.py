@@ -4,9 +4,10 @@ import os
 import shutil
 import sys
 from datetime import datetime
-from time import sleep
+from time import sleep, strftime
 import numpy as np
 #from functools import partial
+from ppt import Presentation
 #
 from absl import flags
 from actorcritic.agent import ActorCriticAgent, ACMode
@@ -30,12 +31,14 @@ import gym
 #from gym_grid.envs import GridEnv
 import gym_gridworld
 
+import studyconfiguration
+
 FLAGS = flags.FLAGS
 flags.DEFINE_bool("visualize", False, "Whether to render with pygame.")
 flags.DEFINE_integer("resolution", 32, "Resolution for screen and minimap feature layers.")
 flags.DEFINE_integer("step_mul", 1, "Game steps per agent step.")
 flags.DEFINE_integer("n_envs", 40, "Number of environments to run in parallel")
-flags.DEFINE_integer("episodes", 10, "Number of complete episodes")
+flags.DEFINE_integer("episodes", 1, "Number of complete episodes")
 flags.DEFINE_integer("n_steps_per_batch", 32,
     "Number of steps per batch, if None use 8 for a2c and 128 for ppo")  # (MINE) TIMESTEPS HERE!!! You need them cauz you dont want to run till it finds the beacon especially at first episodes - will take forever
 flags.DEFINE_integer("all_summary_freq", 50, "Record all summaries every n batch")
@@ -101,8 +104,15 @@ flags.DEFINE_bool("trace", False, "Whether to trace the code execution.")
 
 flags.DEFINE_bool("save_replay", False, "Whether to save a replay at the end.")
 
-#flags.DEFINE_string("map", None, "Name of a map to use.")
-
+# User Study configurations
+flags.DEFINE_string("map", 'original_drawn_map', "name of a map to use.")
+flags.DEFINE_integer("hikerx", 4, "x coordinate for hiker (integer 3-17)")
+flags.DEFINE_integer("hikery", 4, "y coordinate for hiker (integer 3-17)")
+flags.DEFINE_integer("dronex", 17, "x coordinate for drone (integer 3-17)")
+flags.DEFINE_integer("droney", 17, "y coordinate for drone (integer 3-17)")
+flags.DEFINE_boolean("getnames", False, "get names of available maps")
+flags.DEFINE_string("getmap", "", "get map by name")
+flags.DEFINE_boolean("studyhelp", False, "show help for study configuation (False | True)")
 
 FLAGS(sys.argv)
 
@@ -113,7 +123,6 @@ if FLAGS.training:
     full_summary_path = os.path.join(FLAGS.summary_path, FLAGS.model_name)
 else:
     full_summary_path = os.path.join(FLAGS.summary_path, "no_training", FLAGS.model_name)
-
 
 def check_and_handle_existing_folder(f):
     if os.path.exists(f):
@@ -303,7 +312,8 @@ def main():
             RED = (255, 192, 192)
             BLACK = (0, 0, 0)
             WHITE = (255, 255, 255)
-
+            LIGHT_YELLOW = (255, 255, 153)
+            print("Init pygame")
             pygame.init()
             gameDisplay = pygame.display.set_mode((display_w, display_h))
             gameDisplay.fill(DARK_BLUE)
@@ -324,8 +334,13 @@ def main():
                 gameDisplay.blit(surf, (x, y))
             sleep_time = 0.5
             running = True
+            rootname = os.path.abspath(os.path.dirname(__file__))
+            dirname = os.path.join(rootname,'images')
+            run_name = strftime("run_%Y%m%d_%H%M%S_")
             while runner.episode_counter <= (FLAGS.episodes - 1) and running==True:
                 print('Episode: ', runner.episode_counter)
+                episode_name = run_name + str(runner.episode_counter) + ".pptx"
+                ppt = Presentation(dirname, episode_name)
                 runner.reset_demo()  # Cauz of differences in the arrangement of the dictionaries
                 map_xy = runner.envs.map_image
                 map_alt = runner.envs.alt_view
@@ -345,7 +360,7 @@ def main():
                 done = 0
                 while done==0:
                     # RUN THE MAIN LOOP
-                    obs, action, value, reward, done = runner.run_trained_batch()
+                    obs, action, value, reward, done, success = runner.run_trained_batch()
 
                     rewards.append(reward)
                     if done:
@@ -355,8 +370,10 @@ def main():
 
                     screen_mssg_variable("Value    : ", np.round(value,3), (168, 350))
                     screen_mssg_variable("Reward: ", np.round(reward,3), (168, 372))
+
                     pygame.display.update()
                     pygame.event.get()
+
                     sleep(sleep_time)
 
                     if action==15:
@@ -375,9 +392,22 @@ def main():
                     # Update finally the screen with all the images you blitted in the run_trained_batch
                     pygame.display.update() # Updates only the blitted parts of the screen, pygame.display.flip() updates the whole screen
                     pygame.event.get() # Show the last state and then reset
+                    image_file_name = dirname + '/Image_' + str(t) + '.bmp'
+                    print(str(t), end=",")
+                    pygame.image.save(gameDisplay,image_file_name)
+                    title = 'Step ' + str(t)
+                    if done:
+                        if success:
+                            title += ': Success'
+                        else:
+                            title += ': Crash'
+
+                    ppt.add_image_slide(image_file_name, title)
+
                     sleep(sleep_time)
                     t += 1
                 clock.tick(15)
+                ppt.save()
 
         except KeyboardInterrupt:
             pass
@@ -394,4 +424,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if FLAGS.studyhelp:
+        print(studyconfiguration.studyhelp())
+    elif FLAGS.getnames:
+        print(studyconfiguration.get_map_names())
+    elif FLAGS.getmap:
+        print(studyconfiguration.get_map_by_name(FLAGS.getmap))
+    else:
+        main()

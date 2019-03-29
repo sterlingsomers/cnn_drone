@@ -173,10 +173,12 @@ class Runner(object):
 
         # action = agent(state)
         action_ids, value_estimate, representation = self.agent.step_eval(latest_obs) # (MINE) AGENT STEP = INPUT TO NN THE CURRENT STATE AND OUTPUT ACTION
-        print('|actions:', action_ids)
+        #print('|actions:', action_ids)
         obs_raw = self.envs.step(action_ids) # It will also visualize the next observation if all the episodes have ended as after success it retunrs the obs from reset
+        #print("Debug trained_batch")
+
         latest_obs = self.obs_processer.process(obs_raw[0:-3])  # Take only the first element which is the rgb image and ignore the reward, done etc
-        print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
+        #print('-->|rewards:', np.round(np.mean(obs_raw[1]), 3))
 
         # if obs_raw[2]: # done is True
         #     # for r in obs_raw[1]: # You will double count here as t
@@ -186,4 +188,8 @@ class Runner(object):
         self.batch_counter += 1
         #print('Batch %d finished' % self.batch_counter)
         sys.stdout.flush()
-        return obs_raw[0:-3], action_ids[0], value_estimate[0], obs_raw[1], obs_raw[2]
+        try:
+            success = obs_raw[3]['success']
+        except Exception as e:
+            success = False
+        return obs_raw[0:-3], action_ids[0], value_estimate[0], obs_raw[1], obs_raw[2], success

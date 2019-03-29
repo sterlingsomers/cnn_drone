@@ -211,3 +211,9 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+.idea/
+_files/
+
+baselines/
+pysc2/
+.DS_Store
